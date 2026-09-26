@@ -1,0 +1,30 @@
+# Environment and secrets
+.env*
+!.env.example
+
+# Node dependencies and build artifacts
+node_modules/
+dist/
+coverage/
+
+# Database and persistence
+data/*.db
+data/*.sqlite
+data/*.db-journal
+data/*.sqlite-journal
+data/*.db-wal
+data/*.sqlite-wal
+
+# Logs and debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS and Editor metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
