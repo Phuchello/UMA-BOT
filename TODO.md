@@ -12,15 +12,22 @@
 - [x] Commit & push Phase 0 checkpoint to `feat/phase0-phase1`
 
 ## Phase 1: Application Scaffold & Team Registration
-- [ ] Setup normalized database schema (Tournament, Team, Player) with strict invariants
-- [ ] Implement database repositories with transaction and concurrency support
-- [ ] Build Discord bot client startup and slash command registration
-- [ ] Build Vietnamese-first Registration Panel (`📝 Đăng ký đội`, `👥 Danh sách đội`, `📘 Hướng dẫn`)
-- [ ] Build Team Registration Modal & Submitter with exactly 5 starters + optional substitutes
-- [ ] Build BTC Review Queue in `🎛️・ban-tổ-chức` (`✅ Duyệt`, `✏️ Yêu cầu sửa`, `❌ Từ chối`)
-- [ ] Implement concurrency, idempotency, and race condition protections
-- [ ] Write comprehensive Vitest test suite for Phase 1 domain & handlers
-- [ ] Create `docs/ARCHITECTURE.md` and `docs/PHASE1_TEST_REPORT.md`
-- [ ] Update `README.md` and `PROJECT_STATE.md`
-- [ ] Commit & push Phase 1 checkpoint to `feat/phase0-phase1`
-- [ ] Create Draft Pull Request to `main`
+- [x] Setup normalized database schema (Tournament, Team, Player) with strict invariants
+- [x] Implement database repositories with transaction and concurrency support
+- [x] Build Discord bot client startup and slash command registration
+- [x] Build Vietnamese-first Registration Panel (`📝 Đăng ký đội`, `👥 Danh sách đội`, `📘 Hướng dẫn`)
+- [x] Build Team Registration Modal & Submitter with exactly 5 starters + optional substitutes
+- [x] Build BTC Review Queue in `🎛️・ban-tổ-chức` (`✅ Duyệt`, `✏️ Yêu cầu sửa`, `❌ Từ chối`)
+- [x] Implement concurrency, idempotency, and race condition protections
+- [x] Write comprehensive Vitest test suite for Phase 1 domain & handlers
+- [x] Create `docs/ARCHITECTURE.md` and `docs/PHASE1_TEST_REPORT.md`
+- [x] Update `README.md` and `PROJECT_STATE.md`
+- [x] Commit & push Phase 1 checkpoint to `feat/phase0-phase1`
+- [x] Create Draft Pull Request to `main`
+
+## Phase 2: Tournament Execution & Match Management (Deferred)
+- [ ] Implement check-in workflow for approved teams
+- [ ] Build bracket generation & seeding based on Phase 0 engine adapter
+- [ ] Automated private match thread creation for competing captains and referees
+- [ ] Screenshot evidence upload & score submission modal
+- [ ] BTC score verification & match advancement

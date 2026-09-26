@@ -12,27 +12,27 @@ Vietnamese-first Discord tournament system tailored specifically for UMA Club.
 
 ## Current Project Status
 
-- **Phase 0 (Tournament Engine Validation):** In Progress
-- **Phase 1 (Application Scaffold & Registration Workflow):** Planned
-- **Phase 2+ (Matches, Bracket, Evidence & Scoring):** Deferred to subsequent milestones
+- **Phase 0 (Tournament Engine Validation):** Complete (`USE_WITH_ADAPTER`)
+- **Phase 1 (Application Scaffold & Registration Workflow):** Complete (100% test coverage)
+- **Phase 2+ (Matches, Bracket, Evidence & Scoring):** Deferred to subsequent milestone
 
 *Note: Features not yet built are strictly marked as pending or planned. Unfinished features are never claimed as operational.*
 
 ## Architecture Overview
 
 The system is built as a standalone Discord application with clean separation of concerns:
-- **Discord Bot Layer:** Slash commands, buttons, select menus, and modals providing intuitive Vietnamese-first UX.
-- **Tournament Engine Adapter:** Application-owned `TournamentEngine` interface isolating bracket mechanics from 3rd-party libraries.
-- **Registration & Approval Domain:** Normalized relational storage (SQLite) enforcing strict domain invariants (5 starters, unique UIDs, atomic staff reviews).
+- **Discord Bot Layer (`src/bot/`):** Slash commands (`/uma`), mobile-optimized 5-row registration modal, buttons, and embeds providing intuitive Vietnamese-first UX.
+- **Tournament Engine Adapter (`src/tournament/`):** Application-owned `TournamentEngine` interface isolating bracket mechanics from 3rd-party libraries.
+- **Registration & Approval Domain (`src/registration/`):** Normalized relational storage (`node:sqlite`) enforcing strict domain invariants (5 starters, unique UIDs, atomic staff reviews).
 - **Concurrency & Idempotency:** Guaranteed single-state transitions with race condition locks for BTC staff actions.
 
 ## Development Setup
 
 ### Prerequisites
 
-- Node.js 20+ (tested on Node v24+)
+- Node.js 22+ or 24+ (uses built-in `node:sqlite` module)
 - npm 10+
-- SQLite3 (native build tools for `better-sqlite3`)
+- Git
 
 ### Installation
 
@@ -80,3 +80,4 @@ npm start
 - `docs/ARCHITECTURE.md`: High-level system design
 - `docs/ENGINE_SPIKE_REPORT.md`: Tournament engine spike findings
 - `docs/DEPENDENCY_LICENSE_REPORT.md`: Dependency license audit
+- `docs/PHASE1_TEST_REPORT.md`: Phase 1 test execution report
