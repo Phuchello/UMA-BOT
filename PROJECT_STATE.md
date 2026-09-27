@@ -1,7 +1,19 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 2A E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 2B Planning
+Phase 2B IMPLEMENTED / Awaiting Automated Review & Discord E2E
+
+## Phase 2B checkpoint
+- **Branch:** `feat/phase2b-match-lifecycle`
+- **Base:** `4abc080c70fc40bbcd7074a30312c9132cd09d33` (95/95 tests, 10 suites)
+- **Tournament transition:** Staff `/uma start` changes `bracket_ready → in_progress` once, using the persisted Phase 2A bracket.
+- **Match states:** `WAITING → READY → ROOM_OPEN → SCHEDULED → READY_TO_START → LIVE` with forward-only SQLite guards.
+- **MATCH_HUB config:** Explicit validated snowflake outside tests; test-only synthetic default. Private rooms are scoped to the configured guild.
+- **Rooms and referees:** Per-match referee user assignments and one persisted private thread/message identity per playable match. Future rounds and BYEs receive no rooms.
+- **Schedule and readiness:** Strict `YYYY-MM-DD HH:mm` in `Asia/Ho_Chi_Minh`, stored as epoch milliseconds; both captains confirm before a referee or staff starts LIVE.
+- **Restart:** Automated reopen preserves match, engine, room and message IDs, referee assignment, schedule, readiness and LIVE state without creating another room.
+- **Automated tests:** 116/116 tests across 11 suites locally (95 previous + 21 Phase 2B/config); typecheck and build pass. CI pending Draft PR.
+- **Discord validation:** No Phase 2B live connection yet. Production UMA Discord remains untouched.
 
 ## Phase 2A checkpoint
 - **Implementation branch:** `feat/phase2a-checkin-bracket` (Merged into `main` via PR #6)
@@ -16,13 +28,14 @@ Phase 2A E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 2B Planning
 - **Automated tests:** 95/95 tests across 10 suites (Typecheck PASS, Build PASS, CI PASS).
 - **Discord validation:** Completed on dedicated Test Guild (`1435984347814432801`) with verdict `PASS_WITH_LIMITATIONS`. Production UMA Discord remains untouched.
 
-## PR #1–#6
+## PR #1–#7
 - PR #1 MERGED into `main` with merge commit `30a21aa`.
 - PR #2 MERGED into `main` with merge commit `2fe7c3c` (explicit Discord resource IDs).
 - PR #3 MERGED into `main` with merge commit `2a81dc6` (historical smoke-test findings).
 - PR #4 MERGED into `main` with merge commit `5e47f49` (fixed modal placeholder constraint and Windows direct entry).
 - PR #5 MERGED into `main` with merge commit `219ba94` (Phase 1 E2E retest report).
 - PR #6 MERGED into `main` with merge commit `67d6a71` (Phase 2A check-in, draw, and bracket).
+- PR #7 MERGED into `main` with merge commit `4abc080` (Phase 2A Discord E2E report).
 
 ## Discord E2E Validation (Phase 2A)
 - **Status:** PASS_WITH_LIMITATIONS
@@ -47,10 +60,10 @@ Phase 2A E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 2B Planning
   2. `MULTI_CAPTAIN_DISCORD_CHECKIN_NOT_MANUALLY_VALIDATED`: Only Team A captain was checked in directly via the Discord client; Teams B and C were checked in via canonical domain fallback (`TournamentService.checkIn`) due to having only one physical Discord account for testing.
 
 ## Last Safe Checkpoint
-Main commit `67d6a71` has successful CI run `36294131097`; Phase 2A Discord E2E is `PASS_WITH_LIMITATIONS`.
+Main commit `4abc080` has successful CI run `36295522256`; Phase 2A Discord E2E is `PASS_WITH_LIMITATIONS`.
 
 ## Exact Next Action
-Open Draft PR with Phase 2A Discord E2E report. Await human review and Phase 2B planning. Do not start Phase 2B yet.
+Review the Phase 2B Draft PR and CI. After merge, perform a separate Phase 2B Discord E2E test. Do not start Phase 3.
 
 ## Branch
-`docs/phase2a-e2e-retest`
+`feat/phase2b-match-lifecycle`

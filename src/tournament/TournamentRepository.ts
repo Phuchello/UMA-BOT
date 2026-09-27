@@ -92,10 +92,11 @@ export class TournamentRepository {
       .run(id, serialized, now, staffId);
     const insertMatch = this.db.prepare(`INSERT INTO tournament_matches
       (id, tournament_id, engine_match_id, round_number, match_number, team1_id, team2_id, is_bye, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SCHEDULED', ?, ?)`);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     for (const match of bracket.matches) {
       insertMatch.run(`match_${crypto.randomUUID()}`, id, match.id, match.round, match.matchNumber,
-        match.team1.id, match.team2.id, Number(match.isBye), now, now);
+        match.team1.id, match.team2.id, Number(match.isBye),
+        match.team1.id && match.team2.id ? 'READY' : 'WAITING', now, now);
     }
     const insertBye = this.db.prepare('INSERT INTO tournament_byes (tournament_id, team_id, advance_to_engine_match_id, round_number) VALUES (?, ?, ?, ?)');
     for (const bye of byes) insertBye.run(id, bye.teamId, bye.advanceToEngineMatchId, bye.round);

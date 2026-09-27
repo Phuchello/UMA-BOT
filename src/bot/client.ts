@@ -10,10 +10,14 @@ import { RegistrationHandler } from './handlers/RegistrationHandler.js';
 import { TournamentHandler } from './handlers/TournamentHandler.js';
 import { TournamentRepository } from '../tournament/TournamentRepository.js';
 import { TournamentService } from '../tournament/TournamentService.js';
+import { MatchRepository } from '../match/MatchRepository.js';
+import { MatchService } from '../match/MatchService.js';
+import { DiscordMatchRoomGateway } from './DiscordMatchRoomGateway.js';
+import { MatchHandler } from './handlers/MatchHandler.js';
 import { umaCommand } from './commands/umaCommand.js';
 import { getConfig } from '../config/env.js';
 
-export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: TeamRepository } {
+export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: TeamRepository; matchService: MatchService } {
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -23,7 +27,11 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
 
   const teamRepo = new TeamRepository(db);
   const registrationHandler = new RegistrationHandler(teamRepo, client);
-  const tournamentHandler = new TournamentHandler(new TournamentService(new TournamentRepository(db)), teamRepo);
+  const tournamentRepo = new TournamentRepository(db);
+  const matchService = new MatchService(new MatchRepository(db), tournamentRepo,
+    new TournamentService(tournamentRepo), new DiscordMatchRoomGateway(client));
+  const tournamentHandler = new TournamentHandler(new TournamentService(tournamentRepo), teamRepo, matchService);
+  const matchHandler = new MatchHandler(matchService);
 
   client.on('ready', () => {
     console.log(`🤖 UMA Tournament Bot is online as ${client.user?.tag}!`);
@@ -33,13 +41,19 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
     try {
       if (interaction.isChatInputCommand()) {
         const subcommand = interaction.options.getSubcommand(false);
-        if (['checkin-open', 'check-in', 'checkins', 'draw', 'bracket', 'status'].includes(subcommand ?? '')) {
+        if (['start', 'match-referee', 'rooms-create', 'match-schedule', 'matches'].includes(subcommand ?? '')) {
+          await matchHandler.handleSlashCommand(interaction);
+        } else if (['checkin-open', 'check-in', 'checkins', 'draw', 'bracket', 'status'].includes(subcommand ?? '')) {
           await tournamentHandler.handleSlashCommand(interaction);
         } else {
           await registrationHandler.handleSlashCommand(interaction);
         }
       } else if (interaction.isButton()) {
-        await registrationHandler.handleButton(interaction);
+        if (interaction.customId.startsWith('match_ready_') || interaction.customId.startsWith('match_start_')) {
+          await matchHandler.handleButton(interaction);
+        } else {
+          await registrationHandler.handleButton(interaction);
+        }
       } else if (interaction.isModalSubmit()) {
         await registrationHandler.handleModalSubmit(interaction);
       }
@@ -54,7 +68,7 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
     }
   });
 
-  return { client, teamRepo };
+  return { client, teamRepo, matchService };
 }
 
 export async function deployCommands(): Promise<void> {

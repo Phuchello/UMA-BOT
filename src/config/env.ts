@@ -20,6 +20,7 @@ function createEnvSchema(isTest: boolean) {
     TOURNAMENT_NAME: z.string().default('UMA Cup 2027'),
     BTC_CHANNEL_ID: isTest ? discordId.default('100000000000000003') : discordId,
     REGISTRATION_CHANNEL_ID: isTest ? discordId.default('100000000000000004') : discordId,
+    MATCH_HUB_CHANNEL_ID: isTest ? discordId.default('100000000000000009') : discordId,
     REFEREE_CHANNEL_ID: isTest ? discordId.default('100000000000000005') : discordId,
     RESULTS_CHANNEL_ID: isTest ? discordId.default('100000000000000006') : discordId,
     TOURNAMENT_ADMIN_ROLE_IDS: isTest

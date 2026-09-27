@@ -36,7 +36,8 @@ async function bootstrap() {
   if (restored) console.log(`🏆 Restored ${restored.matches.length} bracket matches without redraw.`);
 
   // 4. Create Bot Client
-  const { client } = createBotClient(db);
+  const { client, matchService } = createBotClient(db);
+  matchService.validatePersistedState(tournament.id);
 
   // 5. Register Commands if run with --deploy flag
   if (process.argv.includes('--deploy')) {
