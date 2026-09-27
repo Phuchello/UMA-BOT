@@ -54,7 +54,7 @@
 - [x] Staff scheduling in Vietnamese local time
 - [x] Captain ready confirmations and referee/staff LIVE transition
 - [x] Restart persistence and corruption validation
-- [ ] Human review and separate post-merge Phase 2B Discord E2E
+- [x] Human review and separate post-merge Phase 2B Discord E2E
 
 ## Phase 3: Results / Evidence / Referee / Advancement (Deferred)
 - [ ] Screenshot evidence upload and score submission
