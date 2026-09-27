@@ -143,6 +143,66 @@ export function initializeSchema(db: DatabaseSync): void {
       UNIQUE (tournament_id, round_number, match_number)
     );
     CREATE INDEX IF NOT EXISTS idx_tournament_matches_round ON tournament_matches(tournament_id, round_number);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_tournament_matches_identity ON tournament_matches(tournament_id, id);
+
+    CREATE TABLE IF NOT EXISTS match_rooms (
+      tournament_id TEXT NOT NULL,
+      match_id TEXT PRIMARY KEY,
+      discord_thread_id TEXT NOT NULL UNIQUE,
+      parent_channel_id TEXT NOT NULL,
+      starter_message_id TEXT NOT NULL,
+      created_by_discord_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS match_referee_assignments (
+      tournament_id TEXT NOT NULL,
+      match_id TEXT NOT NULL,
+      referee_discord_id TEXT NOT NULL,
+      assigned_by_discord_id TEXT NOT NULL,
+      assigned_at INTEGER NOT NULL,
+      PRIMARY KEY (match_id, referee_discord_id),
+      FOREIGN KEY (tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS match_schedules (
+      tournament_id TEXT NOT NULL,
+      match_id TEXT PRIMARY KEY,
+      scheduled_at INTEGER NOT NULL,
+      scheduled_by_discord_id TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS match_ready_confirmations (
+      tournament_id TEXT NOT NULL,
+      match_id TEXT NOT NULL,
+      team_id TEXT NOT NULL,
+      captain_discord_id TEXT NOT NULL,
+      confirmed_at INTEGER NOT NULL,
+      PRIMARY KEY (match_id, team_id),
+      FOREIGN KEY (tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE,
+      FOREIGN KEY (tournament_id, team_id) REFERENCES teams(tournament_id, id)
+    );
+    CREATE TABLE IF NOT EXISTS match_starts (
+      tournament_id TEXT NOT NULL,
+      match_id TEXT PRIMARY KEY,
+      started_at INTEGER NOT NULL,
+      started_by_discord_id TEXT NOT NULL,
+      FOREIGN KEY (tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS match_audit_logs (
+      id TEXT PRIMARY KEY,
+      tournament_id TEXT NOT NULL,
+      match_id TEXT NOT NULL,
+      actor_discord_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      previous_status TEXT NOT NULL,
+      new_status TEXT NOT NULL,
+      details TEXT,
+      timestamp INTEGER NOT NULL,
+      FOREIGN KEY (tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_match_audit_match ON match_audit_logs(tournament_id, match_id, timestamp);
+    CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL);
 
     -- The adapter omits automatic BYE matches. Record the advancement path,
     -- not a synthetic playable match or fake team.
@@ -168,5 +228,39 @@ export function initializeSchema(db: DatabaseSync): void {
         (OLD.status = 'bracket_ready' AND NEW.status = 'in_progress')
       )
       BEGIN SELECT RAISE(ABORT, 'invalid tournament status transition'); END;
+  `);
+
+  // One-time conversion of Phase 2A's placeholder SCHEDULED state. The marker
+  // prevents later genuine schedules from being reset during subsequent boots.
+  db.exec('BEGIN IMMEDIATE TRANSACTION;');
+  try {
+    const applied = db.prepare("SELECT 1 FROM schema_migrations WHERE name = 'phase2b_match_status_v1'").get();
+    if (!applied) {
+      db.exec(`UPDATE tournament_matches SET status = CASE
+          WHEN team1_id IS NOT NULL AND team2_id IS NOT NULL THEN 'READY' ELSE 'WAITING' END
+        WHERE status = 'SCHEDULED'
+          AND NOT EXISTS (SELECT 1 FROM match_rooms r WHERE r.match_id = tournament_matches.id)
+          AND NOT EXISTS (SELECT 1 FROM match_schedules s WHERE s.match_id = tournament_matches.id);`);
+      db.prepare('INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)')
+        .run('phase2b_match_status_v1', Date.now());
+    }
+    db.exec('COMMIT;');
+  } catch (error) {
+    db.exec('ROLLBACK;');
+    throw error;
+  }
+
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS trg_match_status_insert BEFORE INSERT ON tournament_matches
+      WHEN NEW.status NOT IN ('WAITING','READY','ROOM_OPEN','SCHEDULED','READY_TO_START','LIVE')
+      BEGIN SELECT RAISE(ABORT, 'invalid match status'); END;
+    CREATE TRIGGER IF NOT EXISTS trg_match_status_forward BEFORE UPDATE OF status ON tournament_matches
+      WHEN OLD.status != NEW.status AND NOT (
+        (OLD.status = 'WAITING' AND NEW.status = 'READY') OR
+        (OLD.status = 'READY' AND NEW.status = 'ROOM_OPEN') OR
+        (OLD.status = 'ROOM_OPEN' AND NEW.status = 'SCHEDULED') OR
+        (OLD.status = 'SCHEDULED' AND NEW.status = 'READY_TO_START') OR
+        (OLD.status = 'READY_TO_START' AND NEW.status = 'LIVE')
+      ) BEGIN SELECT RAISE(ABORT, 'invalid match transition'); END;
   `);
 }

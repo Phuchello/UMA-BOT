@@ -46,9 +46,15 @@
 - [x] Add public-safe check-in, status and bracket views
 - [x] Human review and Phase 2A Discord E2E after merge
 
-## Phase 2B: Match Rooms / Match Lifecycle (Deferred)
-- [ ] Automated private match threads for captains and referees
-- [ ] Match scheduling and lifecycle controls
+## Phase 2B: Match Rooms / Match Lifecycle
+- [x] Staff tournament start (`bracket_ready` → `in_progress`)
+- [x] One-time Phase 2A match-status migration
+- [x] Per-match referee assignment
+- [x] Private match-room gateway and persisted room identities
+- [x] Staff scheduling in Vietnamese local time
+- [x] Captain ready confirmations and referee/staff LIVE transition
+- [x] Restart persistence and corruption validation
+- [ ] Human review and separate post-merge Phase 2B Discord E2E
 
 ## Phase 3: Results / Evidence / Referee / Advancement (Deferred)
 - [ ] Screenshot evidence upload and score submission

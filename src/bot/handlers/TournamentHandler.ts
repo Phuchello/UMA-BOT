@@ -3,9 +3,12 @@ import { TeamRepository } from '../../registration/TeamRepository.js';
 import { TournamentService, TournamentError } from '../../tournament/TournamentService.js';
 import { getConfig, isStaffMember } from '../../config/env.js';
 import { TournamentUI } from '../ui/TournamentUI.js';
+import type { MatchService } from '../../match/MatchService.js';
+import { MatchUI } from '../ui/MatchUI.js';
 
 export class TournamentHandler {
-  constructor(private readonly service: TournamentService, private readonly teams: TeamRepository) {}
+  constructor(private readonly service: TournamentService, private readonly teams: TeamRepository,
+    private readonly matches?: MatchService) {}
 
   public async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const command = interaction.options.getSubcommand();
@@ -42,7 +45,9 @@ export class TournamentHandler {
       } else if (command === 'status') {
         const tournament = this.teams.getTournament(tournamentId);
         const summary = this.service.summary(tournamentId);
-        await interaction.reply({ content: TournamentUI.statusText(tournamentId, summary, tournament!.maxTeams), ephemeral: true });
+        const matchCounts = summary.status === 'in_progress' && this.matches
+          ? MatchUI.statusCounts(this.matches.counts(tournamentId)) : '';
+        await interaction.reply({ content: TournamentUI.statusText(tournamentId, summary, tournament!.maxTeams) + matchCounts, ephemeral: true });
       }
     } catch (error) {
       if (error instanceof TournamentError) {
