@@ -1,34 +1,43 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 1 E2E FAILED / Fix PR Pending
+Phase 1 E2E VALIDATED WITH LIMITATIONS / Awaiting Review
 
-## PR #1–#3
+## PR #1–#4
 - PR #1 MERGED into `main` with merge commit `30a21aa`.
 - PR #2 MERGED into `main` with merge commit `2fe7c3c` (explicit Discord resource IDs).
 - PR #3 MERGED into `main` with merge commit `2a81dc6` (historical smoke-test findings).
+- PR #4 MERGED into `main` with merge commit `5e47f49` (fixed modal placeholder constraint and Windows direct entry).
 
-## Discord E2E Smoke Test (Phase 1)
-- **Status:** FAILED at Phase D (Team Registration interaction)
-- **Report:** `docs/PHASE1_DISCORD_SMOKE_TEST_REPORT.md`
-- **Defects Discovered:**
-  1. `RegistrationUI.createRegistrationModal`: `startersInput` placeholder length is 165 chars, violating Discord's `placeholder <= 100` API constraint and throwing `ExpectedConstraintError`.
-  2. `src/index.ts`: `import.meta.url === \`file://${process.argv[1]}\`` fails on Windows due to slash/backslash mismatch.
-- **Safety Boundary:** 100% verified. Zero requests or mutations reached UMA production server (`1435278955941986540`). All tests executed on isolated test guild (`1435984347814432801`) and test DB (`data/smoke-test.sqlite`).
-
-## Smoke-Test Defect Remediation (PR #4 Pending)
-- Registration modal starters placeholder shortened to satisfy Discord builder constraints; the full five-line example remains in the guide embed.
-- Windows ESM direct-entry guard now compares `import.meta.url` with `pathToFileURL(process.argv[1]).href`.
-- Nine new regression tests serialize real Phase 1 Discord builders and cover direct-entry matching; 78/78 automated tests pass across 9 suites, with typecheck and build clean.
-- Windows non-network proof: built `dist/index.js` invoked bootstrap and failed configuration validation with exit code 1 before Discord login.
-- Live Discord E2E was **not** rerun. The historical Phase D FAIL and Phase E–L BLOCKED verdict remain in the smoke report.
+## Discord E2E Smoke Retest (Phase 1)
+- **Status:** PASS_WITH_LIMITATIONS
+- **Report:** `docs/PHASE1_DISCORD_SMOKE_RETEST_REPORT.md`
+- **Main Commit Tested:** `5e47f498091c59c855d94f03e7500b1b927a0126` (CI Run `36292054406`: `success`)
+- **Automated Baseline:** 78 / 78 tests passing across 9 suites (Typecheck PASS, Build PASS)
+- **Verified Lifecycle Stages:**
+  - Phase A: Windows native entry point (`node dist/index.js`) — PASS
+  - Phase B: Slash command registration check — PASS
+  - Phase C: `/uma panel` display & embed counts (`0/3`, `3 remaining`) — PASS
+  - Phase D: Registration modal regression (opened cleanly without constraint error) — PASS
+  - Phase E: Team registration submission (`team_e170baac-1531-4cb7-af9f-00a17008ed93`, `PENDING`) — PASS
+  - Phase F: BTC correction request (`PENDING` -> `NEEDS_CORRECTION`, buttons disabled) — PASS
+  - Phase G: Captain inspection (`/uma my-team`) & edit modal resubmission (`NEEDS_CORRECTION` -> `PENDING`) — PASS
+  - Phase H: Team identity preservation (team.id identical before/after, 1 active team, 0 orphans) — PASS
+  - Phase I: BTC approval (`PENDING` -> `APPROVED`, review buttons disabled) — PASS
+  - Phase J: Public `/uma teams`, `/uma status`, `/uma panel` validation — PASS
+  - Phase K: Real process restart with persisted database (`data/smoke-retest.sqlite`) — PASS
+  - Phase L: Post-restart persistence verification (`/uma my-team`, `/uma teams`, `/uma status`) — PASS
+  - Phase M: Safety & production integrity (UMA production guild `1435278955941986540` untouched) — PASS
+- **Limitations:**
+  1. `AUTHORIZATION_SEPARATION_NOT_MANUALLY_VALIDATED`: Single Discord test account (`𝑷𝒉𝒖𝒄 𝑽𝒐 💙`, Server Owner / Administrator) acted as both captain and BTC staff. Automated authorization separation is verified in test suites.
+  2. Direct Message delivery to captain was blocked by Discord user privacy settings; full lifecycle was verified in-channel via `/uma my-team` and BTC cards.
 
 ## Last Safe Checkpoint
-Merge commit `2a81dc6` on `main` remains the last live-tested baseline (69/69 automated tests). PR #4 branch fixes both known defects with 78/78 automated tests; Discord re-test is still required.
+Main commit `5e47f49` with 78/78 automated tests and live Discord E2E validation completed with `PASS_WITH_LIMITATIONS`.
 
 ## Exact Next Action
-Review and merge PR #4, then rerun Phase 1 Discord E2E from the previously failed registration interaction while re-validating the earlier safety preflight. Do not start Phase 2.
+Await human review of Draft PR on branch `docs/phase1-e2e-retest`. Do not merge automatically. Do not start Phase 2 until reviewed.
 
 ## Branch
-`fix/phase1-smoke-defects`
+`docs/phase1-e2e-retest`
 
