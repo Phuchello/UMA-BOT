@@ -13,15 +13,16 @@ Vietnamese-first Discord tournament system tailored specifically for UMA Club.
 ## Current Project Status
 
 - **Phase 0 (Tournament Engine Validation):** Complete (`USE_WITH_ADAPTER`)
-- **Phase 1 (Domain, Registration, Hardening & CI):** Complete; automated tests pass, Discord E2E smoke test pending
-- **Phase 2+ (Matches, Bracket, Evidence & Scoring):** Deferred to subsequent milestone
+- **Phase 1 (Registration):** Complete; Discord E2E passed with documented limitations.
+- **Phase 2A (Lock, Check-in, Draw & Bracket):** Implemented on the Phase 2A branch; automated review and Discord E2E pending.
+- **Phase 2B+ (Matches, Evidence & Scoring):** Deferred.
 
 *Note: Features not yet built are strictly marked as pending or planned. Unfinished features are never claimed as operational.*
 
 ## Architecture Overview
 
 The system is built as a standalone Discord application with clean separation of concerns:
-- **Discord Bot Layer (`src/bot/`):** Slash commands (`/uma panel`, `/uma teams`, `/uma my-team`, `/uma status`), mobile-optimized 5-row registration & edit modals, buttons, and embeds providing intuitive Vietnamese-first UX.
+- **Discord Bot Layer (`src/bot/`):** Registration commands plus `/uma checkin-open`, `/uma check-in`, `/uma checkins`, `/uma draw`, and `/uma bracket`; Vietnamese-first embeds and modals.
 - **Tournament Engine Adapter (`src/tournament/`):** Application-owned `TournamentEngine` interface serving as an architectural decoupling boundary to isolate bracket mechanics and provide dependency replacement flexibility.
 - **Registration & Approval Domain (`src/registration/`):** Normalized relational storage (`node:sqlite`) enforcing strict domain invariants (5 starters, unique UIDs, atomic capacity limits, and multi-tournament separation).
 - **Concurrency & Idempotency:** Guaranteed single-state transitions with race condition locks for BTC staff actions and team resubmissions.
@@ -88,3 +89,4 @@ npm start
 - `docs/DEPENDENCY_LICENSE_REPORT.md`: Dependency license audit
 - `docs/PHASE1_TEST_REPORT.md`: Phase 1 test execution report
 - `docs/PHASE1_5_HARDENING_REPORT.md`: Phase 1.5 hardening and CI verification report
+- `docs/PHASE2A_IMPLEMENTATION_REPORT.md`: Lock, check-in, draw, bracket and persistence design

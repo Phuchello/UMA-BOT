@@ -7,6 +7,9 @@ import {
 import { DatabaseSync } from 'node:sqlite';
 import { TeamRepository } from '../registration/TeamRepository.js';
 import { RegistrationHandler } from './handlers/RegistrationHandler.js';
+import { TournamentHandler } from './handlers/TournamentHandler.js';
+import { TournamentRepository } from '../tournament/TournamentRepository.js';
+import { TournamentService } from '../tournament/TournamentService.js';
 import { umaCommand } from './commands/umaCommand.js';
 import { getConfig } from '../config/env.js';
 
@@ -20,6 +23,7 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
 
   const teamRepo = new TeamRepository(db);
   const registrationHandler = new RegistrationHandler(teamRepo, client);
+  const tournamentHandler = new TournamentHandler(new TournamentService(new TournamentRepository(db)), teamRepo);
 
   client.on('ready', () => {
     console.log(`🤖 UMA Tournament Bot is online as ${client.user?.tag}!`);
@@ -28,7 +32,12 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
   client.on('interactionCreate', async interaction => {
     try {
       if (interaction.isChatInputCommand()) {
-        await registrationHandler.handleSlashCommand(interaction);
+        const subcommand = interaction.options.getSubcommand(false);
+        if (['checkin-open', 'check-in', 'checkins', 'draw', 'bracket', 'status'].includes(subcommand ?? '')) {
+          await tournamentHandler.handleSlashCommand(interaction);
+        } else {
+          await registrationHandler.handleSlashCommand(interaction);
+        }
       } else if (interaction.isButton()) {
         await registrationHandler.handleButton(interaction);
       } else if (interaction.isModalSubmit()) {

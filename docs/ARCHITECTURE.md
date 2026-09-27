@@ -1,5 +1,7 @@
 # ARCHITECTURE DOCUMENTATION — UMA TOURNAMENT BOT
 
+> Phase 2A extension: `TournamentService` owns state transitions, eligibility, random draw and adapter orchestration; `TournamentRepository` owns check-in, seed, bracket, match and BYE persistence. `TournamentHandler` and `TournamentUI` expose the new Discord commands without expanding registration handling. See [Phase 2A implementation report](PHASE2A_IMPLEMENTATION_REPORT.md) for the current execution flow. The Phase 1 sections below document the registration architecture.
+
 ## 1. System Overview
 
 **UMA Tournament Bot** is an independent, Vietnamese-first Discord tournament management system designed specifically for **UMA Club**. It supports competitive **Liên Quân Mobile 5v5** tournaments at a realistic scale of 10–15 teams (stress capacity up to 16 teams) with a Single Elimination bracket format.

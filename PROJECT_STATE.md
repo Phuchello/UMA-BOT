@@ -1,13 +1,26 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 1 E2E VALIDATED WITH LIMITATIONS / Awaiting Review
+Phase 2A IMPLEMENTED / Awaiting Automated Review & Discord E2E
 
-## PR #1–#4
+## Phase 2A checkpoint
+- **Implementation branch:** `feat/phase2a-checkin-bracket`
+- **Base:** `219ba946b6174301fb08924f0b98cbf34abf2539` (Phase 1 baseline: 78/78 tests, 9 suites)
+- **State machine:** `registration_open` → `checkin_open` → `bracket_ready`; `in_progress` is reserved for Phase 2B. Additive database triggers enforce forward-only changes.
+- **Check-in:** Captain of approved team only; independent, idempotent row in `team_checkins`.
+- **Random seeds:** Cryptographic shuffle, unique persisted seed 1..N for approved + checked-in teams only; no redraw.
+- **Bracket:** Generated through `TournamentEngine` and `TournamentOrganizerAdapter`; serialized engine state, application match IDs and BYE paths persisted atomically.
+- **15-team verification:** 16 slots, one BYE path, 14 playable match objects, four rounds.
+- **Restart persistence:** Reopen test confirms the same seed mapping, engine match IDs, application match IDs, rounds and BYE path.
+- **Automated tests:** 95/95 tests across 10 suites locally (78 previous + 17 Phase 2A); typecheck and build pass. CI pending Draft PR.
+- **Discord validation:** No Phase 2A live connection yet. Production UMA Discord remains untouched.
+
+## PR #1–#5
 - PR #1 MERGED into `main` with merge commit `30a21aa`.
 - PR #2 MERGED into `main` with merge commit `2fe7c3c` (explicit Discord resource IDs).
 - PR #3 MERGED into `main` with merge commit `2a81dc6` (historical smoke-test findings).
 - PR #4 MERGED into `main` with merge commit `5e47f49` (fixed modal placeholder constraint and Windows direct entry).
+- PR #5 MERGED into `main` with merge commit `219ba94` (Phase 1 E2E retest report).
 
 ## Discord E2E Smoke Retest (Phase 1)
 - **Status:** PASS_WITH_LIMITATIONS
@@ -33,11 +46,11 @@ Phase 1 E2E VALIDATED WITH LIMITATIONS / Awaiting Review
   2. Direct Message delivery to captain was blocked by Discord user privacy settings; full lifecycle was verified in-channel via `/uma my-team` and BTC cards.
 
 ## Last Safe Checkpoint
-Main commit `5e47f49` with 78/78 automated tests and live Discord E2E validation completed with `PASS_WITH_LIMITATIONS`.
+Main commit `219ba94` has successful CI run `36292763190`; Phase 1 Discord E2E remains `PASS_WITH_LIMITATIONS`.
 
 ## Exact Next Action
-Await human review of Draft PR on branch `docs/phase1-e2e-retest`. Do not merge automatically. Do not start Phase 2 until reviewed.
+Review the Phase 2A Draft PR and its CI. After merge, perform a separate Phase 2A Discord E2E test. Do not start Phase 2B yet.
 
 ## Branch
-`docs/phase1-e2e-retest`
+`feat/phase2a-checkin-bracket`
 

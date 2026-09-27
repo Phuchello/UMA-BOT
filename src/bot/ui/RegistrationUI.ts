@@ -7,7 +7,7 @@ import {
   TextInputBuilder,
   TextInputStyle
 } from 'discord.js';
-import type { TeamEntity } from '../../registration/TeamRepository.js';
+import type { TeamEntity, TournamentStatus } from '../../registration/TeamRepository.js';
 
 export class RegistrationUI {
   /**
@@ -19,7 +19,8 @@ export class RegistrationUI {
     activeCount: number,
     approvedCount: number,
     pendingOrCorrectionCount: number,
-    maxTeams: number
+    maxTeams: number,
+    status: TournamentStatus = 'registration_open'
   ): EmbedBuilder {
     const remaining = Math.max(0, maxTeams - activeCount);
     return new EmbedBuilder()
@@ -31,24 +32,25 @@ export class RegistrationUI {
         '• **Bộ môn:** Liên Quân Mobile 5v5\n' +
         '• **Đội hình chuẩn:** Đúng 5 tuyển thủ chính thức (+ tối đa 2 dự bị)\n' +
         '• **Thể thức:** Single Elimination (Loại trực tiếp)\n' +
-        '• **Trạng thái:** 🟢 **ĐANG MỞ ĐĂNG KÝ**\n\n' +
+        `• **Trạng thái:** ${status === 'registration_open' ? '🟢 **ĐANG MỞ ĐĂNG KÝ**' : status === 'checkin_open' ? '🟡 **ĐÃ KHÓA ĐĂNG KÝ — ĐANG CHECK-IN**' : status === 'bracket_ready' ? '🔵 **ĐÃ BỐC THĂM NHÁNH ĐẤU**' : '🔵 **ĐANG THI ĐẤU**'}\n\n` +
         '**📊 TÌNH HÌNH ĐĂNG KÝ:**\n' +
         `• 👥 **Đã đăng ký:** \`${activeCount} / ${maxTeams}\`\n` +
         `• ✅ **Đã duyệt:** ${approvedCount}\n` +
         `• ⏳ **Chờ duyệt / chỉnh sửa:** ${pendingOrCorrectionCount}\n` +
-        `• 🟢 **Còn lại:** ${remaining} suất\n\n` +
-        '📌 *Đội trưởng vui lòng bấm nút bên dưới để mở đơn đăng ký đội.*'
+        (status === 'registration_open' ? `• 🟢 **Còn lại:** ${remaining} suất\n\n` : '• 🔒 **Đăng ký:** Đã khóa\n\n') +
+        (status === 'registration_open' ? '📌 *Đội trưởng vui lòng bấm nút bên dưới để mở đơn đăng ký đội.*' : '📌 *Đăng ký đã khóa. Theo dõi `/uma status` và `/uma bracket`.*')
       )
       .setFooter({ text: 'UMA Tournament System • Vietnamese-First Esports UX' })
       .setTimestamp();
   }
 
-  public static createRegistrationPanelButtons(): ActionRowBuilder<ButtonBuilder> {
+  public static createRegistrationPanelButtons(status: TournamentStatus = 'registration_open'): ActionRowBuilder<ButtonBuilder> {
     return new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('btn_register_team')
         .setLabel('📝 Đăng ký đội')
-        .setStyle(ButtonStyle.Primary),
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(status !== 'registration_open'),
       new ButtonBuilder()
         .setCustomId('btn_team_list')
         .setLabel('👥 Danh sách đội')
@@ -358,8 +360,8 @@ export class RegistrationUI {
     return embed;
   }
 
-  public static createMyTeamButtons(team: TeamEntity): ActionRowBuilder<ButtonBuilder> | null {
-    if (team.status === 'NEEDS_CORRECTION') {
+  public static createMyTeamButtons(team: TeamEntity, tournamentStatus: TournamentStatus = 'registration_open'): ActionRowBuilder<ButtonBuilder> | null {
+    if (team.status === 'NEEDS_CORRECTION' && tournamentStatus === 'registration_open') {
       return new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`btn_edit_team_${team.id}`)
@@ -393,7 +395,7 @@ export class RegistrationUI {
         '• Tối đa **2 tuyển thủ dự bị** (tùy chọn).\n' +
         '• Mỗi tuyển thủ (Game UID) chỉ được đăng ký cho duy nhất 1 đội trong suốt giải đấu.\n' +
         '• Mỗi đội trưởng chỉ được quản lý 1 đội đang hoạt động.\n\n' +
-        '*Lưu ý: Các tính năng điểm danh trước trận, bốc thăm nhánh đấu và tạo phòng riêng thi đấu sẽ được bổ sung ở giai đoạn tiếp theo (Phase 2).*'
+        '*Sau khi BTC khóa đăng ký, đội trưởng của đội đã duyệt dùng `/uma check-in`. BTC sẽ bốc thăm và mọi người xem nhánh đấu bằng `/uma bracket`. Phòng riêng thi đấu và báo kết quả sẽ được bổ sung sau.*'
       )
       .setFooter({ text: 'UMA GAMING ARENA • Tôn vinh tinh thần đồng đội' });
   }

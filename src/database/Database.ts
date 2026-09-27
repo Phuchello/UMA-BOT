@@ -66,6 +66,8 @@ export function initializeSchema(db: DatabaseSync): void {
 
     CREATE INDEX IF NOT EXISTS idx_teams_tourney_captain
       ON teams(tournament_id, captain_discord_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_tourney_identity
+      ON teams(tournament_id, id);
 
     CREATE TABLE IF NOT EXISTS players (
       id TEXT PRIMARY KEY,
@@ -95,5 +97,76 @@ export function initializeSchema(db: DatabaseSync): void {
       reason TEXT,
       timestamp INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS team_checkins (
+      tournament_id TEXT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      team_id TEXT NOT NULL,
+      checked_in_by_discord_id TEXT NOT NULL,
+      checked_in_at INTEGER NOT NULL,
+      PRIMARY KEY (tournament_id, team_id),
+      FOREIGN KEY (tournament_id, team_id) REFERENCES teams(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_team_checkins_tournament ON team_checkins(tournament_id);
+
+    CREATE TABLE IF NOT EXISTS tournament_seeds (
+      tournament_id TEXT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      team_id TEXT NOT NULL,
+      seed INTEGER NOT NULL CHECK (seed > 0),
+      drawn_at INTEGER NOT NULL,
+      drawn_by_discord_id TEXT NOT NULL,
+      PRIMARY KEY (tournament_id, team_id),
+      UNIQUE (tournament_id, seed),
+      FOREIGN KEY (tournament_id, team_id) REFERENCES teams(tournament_id, id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS tournament_brackets (
+      tournament_id TEXT PRIMARY KEY REFERENCES tournaments(id) ON DELETE CASCADE,
+      engine_state TEXT NOT NULL,
+      generated_at INTEGER NOT NULL,
+      generated_by_discord_id TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS tournament_matches (
+      id TEXT PRIMARY KEY,
+      tournament_id TEXT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      engine_match_id TEXT NOT NULL,
+      round_number INTEGER NOT NULL,
+      match_number INTEGER NOT NULL,
+      team1_id TEXT REFERENCES teams(id),
+      team2_id TEXT REFERENCES teams(id),
+      is_bye INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'SCHEDULED',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      UNIQUE (tournament_id, engine_match_id),
+      UNIQUE (tournament_id, round_number, match_number)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tournament_matches_round ON tournament_matches(tournament_id, round_number);
+
+    -- The adapter omits automatic BYE matches. Record the advancement path,
+    -- not a synthetic playable match or fake team.
+    CREATE TABLE IF NOT EXISTS tournament_byes (
+      tournament_id TEXT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      team_id TEXT NOT NULL,
+      advance_to_engine_match_id TEXT NOT NULL,
+      round_number INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (tournament_id, team_id),
+      FOREIGN KEY (tournament_id, team_id) REFERENCES teams(tournament_id, id) ON DELETE CASCADE
+    );
+
+    -- Additive guards work for both new databases and existing Phase 1 files.
+    CREATE TRIGGER IF NOT EXISTS trg_tournament_status_insert
+      BEFORE INSERT ON tournaments
+      WHEN NEW.status NOT IN ('registration_open', 'checkin_open', 'bracket_ready', 'in_progress')
+      BEGIN SELECT RAISE(ABORT, 'invalid tournament status'); END;
+    CREATE TRIGGER IF NOT EXISTS trg_tournament_status_forward
+      BEFORE UPDATE OF status ON tournaments
+      WHEN OLD.status != NEW.status AND NOT (
+        (OLD.status = 'registration_open' AND NEW.status = 'checkin_open') OR
+        (OLD.status = 'checkin_open' AND NEW.status = 'bracket_ready') OR
+        (OLD.status = 'bracket_ready' AND NEW.status = 'in_progress')
+      )
+      BEGIN SELECT RAISE(ABORT, 'invalid tournament status transition'); END;
   `);
 }

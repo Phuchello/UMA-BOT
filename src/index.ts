@@ -1,6 +1,8 @@
 import { getConfig } from './config/env.js';
 import { createDatabase } from './database/Database.js';
 import { TeamRepository } from './registration/TeamRepository.js';
+import { TournamentRepository } from './tournament/TournamentRepository.js';
+import { TournamentService } from './tournament/TournamentService.js';
 import { createBotClient, deployCommands } from './bot/client.js';
 import { pathToFileURL } from 'node:url';
 
@@ -24,6 +26,14 @@ async function bootstrap() {
   const tournament = repo.getTournament(config.ACTIVE_TOURNAMENT_ID);
   if (!tournament) throw new Error(`Tournament "${config.ACTIVE_TOURNAMENT_ID}" was not created.`);
   console.log(`🏆 Tournament "${tournament.id}" ready (capacity: ${tournament.maxTeams} teams).`);
+  const restored = new TournamentService(new TournamentRepository(db)).restoreBracket(tournament.id);
+  if (['bracket_ready', 'in_progress'].includes(tournament.status) && !restored) {
+    throw new Error('Bracket-ready tournament has no persisted bracket.');
+  }
+  if (tournament.status === 'checkin_open' && restored) {
+    throw new Error('Check-in tournament unexpectedly has a persisted bracket.');
+  }
+  if (restored) console.log(`🏆 Restored ${restored.matches.length} bracket matches without redraw.`);
 
   // 4. Create Bot Client
   const { client } = createBotClient(db);
