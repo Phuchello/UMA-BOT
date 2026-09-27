@@ -99,15 +99,7 @@ export class RegistrationUI {
       .setCustomId('txt_starters')
       .setLabel('4. 5 Tuyển thủ chính (Tên | UID)')
       .setStyle(TextInputStyle.Paragraph)
-      .setPlaceholder(
-        'Đúng 5 dòng, định dạng: [Tên Ingame | Game UID]\n' +
-        'VD:\n' +
-        'UMA_Captain | 100000001\n' +
-        'UMA_Mid | 100000002\n' +
-        'UMA_Adc | 100000003\n' +
-        'UMA_Sp | 100000004\n' +
-        'UMA_Jungle | 100000005'
-      )
+      .setPlaceholder('Tên | UID, đúng 5 dòng\nVD: UMA_Top | 100000001')
       .setRequired(true);
 
     const subsInput = new TextInputBuilder()
@@ -396,6 +388,8 @@ export class RegistrationUI {
         '4️⃣ **Theo dõi:** Dùng lệnh `/uma teams` hoặc nút `[👥 Danh sách đội]` để xem các đội đã được duyệt.\n\n' +
         '**2. QUY ĐỊNH ĐỘI HÌNH BẮT BUỘC:**\n' +
         '• Bắt buộc **đúng 5 tuyển thủ chính thức**.\n' +
+        '• Nhập mỗi tuyển thủ trên một dòng theo mẫu `Tên | UID`, ví dụ:\n' +
+        '```text\nUMA_Top | 100000001\nUMA_Jungle | 100000002\nUMA_Mid | 100000003\nUMA_AD | 100000004\nUMA_Support | 100000005\n```\n' +
         '• Tối đa **2 tuyển thủ dự bị** (tùy chọn).\n' +
         '• Mỗi tuyển thủ (Game UID) chỉ được đăng ký cho duy nhất 1 đội trong suốt giải đấu.\n' +
         '• Mỗi đội trưởng chỉ được quản lý 1 đội đang hoạt động.\n\n' +

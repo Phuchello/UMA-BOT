@@ -2,6 +2,7 @@ import { getConfig } from './config/env.js';
 import { createDatabase } from './database/Database.js';
 import { TeamRepository } from './registration/TeamRepository.js';
 import { createBotClient, deployCommands } from './bot/client.js';
+import { pathToFileURL } from 'node:url';
 
 async function bootstrap() {
   console.log('🚀 Initializing UMA Tournament Bot...');
@@ -36,8 +37,13 @@ async function bootstrap() {
   await client.login(config.DISCORD_TOKEN);
 }
 
+export function isDirectExecution(moduleUrl: string, argvEntry?: string): boolean {
+  if (!argvEntry) return false;
+  return moduleUrl === pathToFileURL(argvEntry).href;
+}
+
 // Only auto-run if directly executed
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectExecution(import.meta.url, process.argv[1])) {
   bootstrap().catch(err => {
     console.error('Fatal initialization error:', err);
     process.exit(1);
