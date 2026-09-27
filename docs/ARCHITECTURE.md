@@ -8,9 +8,9 @@
 flowchart TD
     subgraph Discord["Discord Client & UI Layer"]
         Panel["#📝・đăng-ký-thi-đấu (Registration Panel)"]
-        Modal["Registration Modal (5 Action Rows)"]
+        Modal["Registration / Edit Modal (5 Action Rows)"]
         BTC["#🎛️・ban-tổ-chức (Review Queue)"]
-        Commands["Slash Commands (/uma)"]
+        Commands["Slash Commands (/uma panel, /uma teams, /uma my-team, /uma status)"]
     end
 
     subgraph BotLayer["Bot Interaction Layer"]
@@ -20,7 +20,7 @@ flowchart TD
 
     subgraph Domain["Registration & Domain Layer"]
         Parser["RegistrationParser (Validation, Delimiters)"]
-        Repo["TeamRepository (Transactions, Invariants)"]
+        Repo["TeamRepository (Transactions, Capacity, Invariants)"]
     end
 
     subgraph Storage["Persistence Layer"]
@@ -28,16 +28,16 @@ flowchart TD
         Tables["Tables: tournaments, teams, players, audit_logs"]
     end
 
-    subgraph Engine["Tournament Engine (Isolated)"]
+    subgraph Engine["Tournament Engine (Architectural Boundary)"]
         Interface["TournamentEngine Interface"]
         Adapter["TournamentOrganizerAdapter"]
-        Lib["tournament-organizer (GPL-3.0 isolated)"]
+        Lib["tournament-organizer (Third-party library)"]
     end
 
     Panel -->|Click 'Đăng ký'| Modal
     Modal -->|Submit| Handler
     Commands --> Handler
-    BTC -->|Approve / Reject| Handler
+    BTC -->|Approve / Correct / Reject| Handler
 
     Handler --> Parser
     Handler --> Repo
@@ -53,9 +53,14 @@ flowchart TD
 ## 2. Layered Architecture
 
 ### 2.1. Discord Interaction Layer (`src/bot/`)
-- **`commands/umaCommand.ts`:** Slash commands (`/uma panel`, `/uma teams`, `/uma status`).
+- **`commands/umaCommand.ts`:** Slash commands:
+  - `/uma panel`: Exports registration portal (BTC only).
+  - `/uma teams`: Lists all approved and pending teams.
+  - `/uma my-team`: Inspects captain's team status with `[✏️ Chỉnh sửa đơn]` button when in `NEEDS_CORRECTION`.
+  - `/uma status`: Shows real-time tournament capacity and registration counts.
 - **`ui/RegistrationUI.ts`:** Pure UI component builders for embeds, buttons, and modals.
-  - **Mobile-First Registration Modal:** Tailored to Discord's maximum 5 Action Rows limit (Team Name, Abbreviation, Captain Contact, 5 Starters, Optional Substitutes).
+  - **5 Action Rows Modal:** Tailored to Discord's maximum 5 Action Rows limit (Team Name, Abbreviation, Captain Contact, 5 Starters, Optional Substitutes).
+  - **Edit Registration Modal:** Pre-filled with existing roster for seamless correction resubmissions.
   - **BTC Review Card:** Visual card in `#🎛️・ban-tổ-chức` with interactive review buttons (`[✅ Duyệt Đội]`, `[✏️ Yêu Cầu Sửa]`, `[❌ Từ Chối]`).
 - **`handlers/RegistrationHandler.ts`:** Dispatches and handles Discord events with authorization checks.
 
@@ -65,16 +70,20 @@ flowchart TD
   - Enforces 0 to `maxSubstitutes` (default 2).
   - Detects and rejects intra-submission duplicate UIDs.
 - **`TeamRepository.ts`:** Manages normalized entities and transactional operations.
-  - Enforces domain invariants: team name uniqueness, abbreviation uniqueness, captain single-team limit, cross-team UID uniqueness.
-  - Atomic status transitions (`DRAFT`, `PENDING`, `APPROVED`, `REJECTED`, `WITHDRAWN`).
+  - **Tournament Identity Separation:** Operations scoped strictly to `ACTIVE_TOURNAMENT_ID` rather than Discord `guildId`.
+  - **Atomic Capacity Enforcement:** Evaluates active teams against `max_teams` inside a database transaction lock.
+  - **Domain Captain Uniqueness:** Prevents captains with active registrations from registering multiple teams, while allowing captains of rejected/withdrawn teams to register again.
+  - **Correction Lifecycle:** Transitions `PENDING` -> `NEEDS_CORRECTION` -> Captain edit -> `PENDING` with atomic player row replacement while preserving `team.id`.
 
 ### 2.3. Tournament Engine Abstraction (`src/tournament/`)
 - **`TournamentEngine.ts`:** Application-owned interface defining tournament lifecycle methods (`createTournament`, `registerTeams`, `startTournament`, `getBracket`, `getMatches`, `reportResult`, `resetResult`, `serialize`, `restore`).
-- **`TournamentOrganizerAdapter.ts`:** Wraps `tournament-organizer` version 4.1.1, completely isolating GPL-3.0-or-later dependencies (`tournament-pairings`) from the application domain.
+- **`TournamentOrganizerAdapter.ts`:** Implements `TournamentEngine` wrapping `tournament-organizer@4.1.1`.
+- **Architectural Decoupling Boundary:** The adapter boundary isolates third-party bracket code from application domain models, providing replacement flexibility if the underlying pairing engine needs to be substituted in the future.
 
 ### 2.4. Persistence Layer (`src/database/`)
 - **Engine Choice:** Node.js native `node:sqlite` (`DatabaseSync`).
-  - **Justification:** On Windows with Node v24.19.0, `better-sqlite3` fails to install due to lack of prebuilt binaries and missing Visual C++ build tools. `node:sqlite` is standard, synchronous, high-performance, and eliminates all native C++ compilation dependencies.
+  - **Runtime Baseline:** Node.js 22+ (tested on Node 22 and 24).
+  - **Justification:** High-performance, synchronous, zero-dependency SQLite built into Node.js. Avoids native C++ compilation issues on Windows.
   - **Configuration:** Foreign keys enabled (`PRAGMA foreign_keys = ON;`), WAL mode enabled (`PRAGMA journal_mode = WAL;`).
 
 ---
@@ -107,6 +116,7 @@ CREATE TABLE teams (
 
 CREATE UNIQUE INDEX idx_teams_tourney_name ON teams(tournament_id, name);
 CREATE UNIQUE INDEX idx_teams_tourney_abbr ON teams(tournament_id, abbreviation);
+CREATE INDEX idx_teams_tourney_captain ON teams(tournament_id, captain_discord_id);
 
 CREATE TABLE players (
   id TEXT PRIMARY KEY,
@@ -139,8 +149,8 @@ CREATE TABLE audit_logs (
 
 ## 4. Concurrency & Idempotency Model
 
-### 4.1. The Double-Approval Race Condition
-When two BTC staff members click `[✅ Duyệt Đội]` simultaneously on the same pending card:
+### 4.1. Double-Approval / Conflicting Action Race Condition
+When two BTC staff members click `[✅ Duyệt Đội]` or `[❌ Từ Chối]` simultaneously on the same pending card:
 - The database executes an atomic conditional update:
   ```sql
   UPDATE teams 
@@ -148,16 +158,24 @@ When two BTC staff members click `[✅ Duyệt Đội]` simultaneously on the sa
   WHERE id = ? AND status = 'PENDING'
   ```
 - Only the first transaction modifies a row (`changes === 1`).
-- The second transaction receives `changes === 0`, immediately detecting the race condition.
-- The second interaction safely aborts with:
-  ```
-  "Đơn này vừa được xử lý bởi thành viên BTC khác."
-  ```
-- No duplicate audit logs, no duplicate roles, and no duplicate notifications occur.
+- The second transaction receives `changes === 0`, safely detecting the state change.
+- The second interaction aborts cleanly with:
+  `"Đơn này vừa được xử lý bởi thành viên BTC khác."`
 
-### 4.2. Stale Interaction & State Enforcement
-- Once a team is `APPROVED`, subsequent `reject` or `correction` calls return `ALREADY_PROCESSED`.
-- Once a team is `REJECTED`, subsequent `approve` calls return `ALREADY_PROCESSED`.
+### 4.2. Capacity Race Condition Protection
+When 15 of 16 slots are filled and two captains attempt to register simultaneously:
+- Each registration executes inside a `BEGIN IMMEDIATE TRANSACTION`.
+- The active team count is evaluated within the transaction lock:
+  ```sql
+  SELECT COUNT(*) as count FROM teams 
+  WHERE tournament_id = ? AND status IN ('PENDING', 'APPROVED', 'NEEDS_CORRECTION')
+  ```
+- Only the first transaction reads `15 < 16` and commits.
+- The competing transaction evaluates `16 >= 16` and rolls back with `REGISTRATION_FULL` (`"Giải đấu đã đủ số lượng đội đăng ký."`).
+
+### 4.3. Resubmission Concurrency & Idempotency
+- When a captain resubmits a corrected roster, the transaction validates `status === 'NEEDS_CORRECTION'` and ownership before atomically replacing players and setting status to `PENDING`.
+- Repeated submissions fail safely without corrupting the roster.
 
 ---
 
@@ -165,13 +183,13 @@ When two BTC staff members click `[✅ Duyệt Đội]` simultaneously on the sa
 
 1. **Least Privilege:** Bot requests zero Administrator permissions; operations require only channel-level Send/Manage Message permissions.
 2. **Private Data Isolation:**
-   - Captain contact information (`captainContact`) is strictly restricted to the staff review embed in `#🎛️・ban-tổ-chức`.
+   - Captain contact information (`captainContact`) is strictly restricted to staff review embeds in `#🎛️・ban-tổ-chức`.
    - Public team lists (`/uma teams`) omit phone/Zalo contacts and raw UIDs.
-3. **No Secret Leakage:** `.env` is strictly ignored; `.env.example` contains only placeholder schema.
+3. **No Secret Leakage:** `.env` is strictly ignored; `.env.example` contains only placeholder schema. CI runs fully isolated with mock configurations.
 
 ---
 
-## 6. Future Phase Roadmap
+## 6. Future Phase Roadmap (Deferred)
 
 - **Phase 2:** Check-in management, dynamic match thread spawning, live bracket Discord embed updates.
 - **Phase 3:** Match result reporting, screenshot evidence attachment verification, referee dispute handling.

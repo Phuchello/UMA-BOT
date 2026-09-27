@@ -67,9 +67,9 @@ All 19 test cases in the Phase 1 test suite passed successfully. Combined with t
 - **Case 2.3: Reject Duplicate Team Abbreviation within Tournament**
   - *Action:* Register a different team name but with existing abbreviation `PHX`.
   - *Result:* Rejected by unique constraint `(tournament_id, abbreviation)`.
-- **Case 2.4: Reject Duplicate Captain ID**
-  - *Action:* Same Discord user attempts to captain a second team in the same tournament.
-  - *Result:* Rejected by unique constraint `(tournament_id, captain_id)`.
+- **Case 2.4: Reject Duplicate Captain in Active Teams**
+  - *Action:* Same Discord user attempts to captain a second active team in the same tournament.
+  - *Result:* Rejected by domain invariant check, ensuring each captain manages at most 1 active team per tournament.
 - **Case 2.5: Reject Duplicate Player UID across Different Teams**
   - *Action:* Team B attempts to register a player whose UID is already registered in Team A.
   - *Result:* Rejected by unique constraint `(tournament_id, game_uid)`, preventing cross-team player poaching.

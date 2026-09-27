@@ -25,6 +25,18 @@
 - [x] Commit & push Phase 1 checkpoint to `feat/phase0-phase1`
 - [x] Create Draft Pull Request to `main`
 
+## Phase 1.5: Hardening & Consistency Patch
+- [x] Separate `tournamentId` (`ACTIVE_TOURNAMENT_ID`) from `DISCORD_GUILD_ID`
+- [x] Complete registration correction workflow (`NEEDS_CORRECTION` -> `/uma my-team` edit -> `PENDING`)
+- [x] Atomic capacity enforcement in domain (`activeCount >= maxTeams` rejection)
+- [x] Align captain uniqueness claims (transactional domain enforcement allowing re-registration after rejection/withdrawal)
+- [x] Accurate guide embed without claiming Phase 2 features are live
+- [x] Add GitHub Actions CI workflow (`.github/workflows/ci.yml`)
+- [x] Cautious architectural boundary language in license documentation
+- [x] Phase 1.5 comprehensive test hardening suite (`tests/phase1_5_hardening.test.ts`)
+- [x] Create `docs/PHASE1_5_HARDENING_REPORT.md`
+- [x] Update Draft PR #1 body
+
 ## Phase 2: Tournament Execution & Match Management (Deferred)
 - [ ] Implement check-in workflow for approved teams
 - [ ] Build bracket generation & seeding based on Phase 0 engine adapter

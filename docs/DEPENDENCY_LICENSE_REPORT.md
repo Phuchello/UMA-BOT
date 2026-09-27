@@ -47,15 +47,16 @@ This report documents the local package metadata and license audit of the candid
    - The repository `Phuchello/UMA-BOT` is hosted publicly on GitHub.
    - If the repository chooses an open-source license, **GPL-3.0-or-later** is 100% compliant with all dependencies.
    - If UMA Club desires a permissive license (such as MIT or Apache-2.0), `tournament-organizer` cannot be shipped in that repository without violating the copyleft obligations of `tournament-pairings`.
-4. **Architectural Mitigation:**
-   - Under Phase 0C, all tournament logic is strictly placed behind the **`TournamentEngine`** application interface.
-   - Application domain models (`Tournament`, `Team`, `Player`, `Match`) never import `tournament-organizer` or `tournament-pairings`.
-   - If a permissive license becomes a mandatory requirement in the future, the engine adapter (`TournamentOrganizerAdapter`) can be replaced with an independent MIT/BSD elimination engine with zero refactoring to the Discord UI or registration domain.
+4. **Architectural Decoupling Boundary:**
+   - Under Phase 0C, bracket mechanics are placed behind the application-owned **`TournamentEngine`** interface.
+   - Application domain models (`Tournament`, `Team`, `Player`, `Match`) do not import third-party bracket packages directly.
+   - This architectural boundary provides **replacement flexibility**: should UMA Club require a strictly permissive stack in the future, `TournamentOrganizerAdapter` can be swapped with a custom or MIT-licensed elimination engine without modifying the Discord UI or registration repositories.
+   - *Note:* This technical boundary provides architectural isolation and modularity; it does not constitute formal legal analysis or claim to neutralize copyleft obligations.
 
 ---
 
 ## 5. Recommendation
 
 - Classify tournament engine integration as **`USE_WITH_ADAPTER`**.
-- Keep the project license as **Pending Review** in `LICENSE_REVIEW.md` until final architectural signoff.
-- Maintain absolute isolation of `tournament-organizer` within `src/tournament/TournamentOrganizerAdapter.ts`.
+- Keep the repository license as **UNLICENSED / Pending Review** in `LICENSE_REVIEW.md`.
+- Maintain clean dependency boundaries within `src/tournament/TournamentOrganizerAdapter.ts`.
