@@ -17,7 +17,7 @@ Vietnamese-first Discord tournament system tailored specifically for UMA Club.
 - **Phase 2A (Lock, Check-in, Draw & Bracket):** Complete; Discord E2E passed with documented limitations.
 - **Phase 2B (Match Rooms & Lifecycle):** Complete; Discord E2E passed with documented limitations.
 - **Phase 3A (Results, Evidence & Advancement):** Complete; Discord E2E `PASS_WITH_LIMITATIONS`.
-- **Phase 3B (Public Results, Ceremony, Livestream & Final Hardening):** Implemented on `feat/phase3b-finalization`; awaiting automated review and separate Discord E2E.
+- **Phase 3B (Public Results, Ceremony, Livestream & Final Hardening):** Complete; Discord E2E passed with documented limitations (Report: [PHASE3B_DISCORD_E2E_REPORT.md](docs/PHASE3B_DISCORD_E2E_REPORT.md)). Next: License review and production release approval.
 
 *Note: Features not yet built are strictly marked as pending or planned. Unfinished features are never claimed as operational.*
 

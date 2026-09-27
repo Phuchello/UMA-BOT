@@ -1,18 +1,19 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 3B IMPLEMENTED / Awaiting Automated Review & Discord E2E
+Phase 3B Discord E2E Validated (PASS_WITH_LIMITATIONS) / Awaiting Dependency License Review
 
-## Phase 3B implementation checkpoint
-- **Branch:** `feat/phase3b-finalization` from `aa45deacb4094d71daa7d01026561d1241afe3a6`.
-- **Clean baseline:** Windows development clone at `C:\Users\lyle3\source\repos\UMA-BOT-phase3b`; Node 24.19.0, npm 11.17.0; 149/149 tests in 12 suites, typecheck/build/diff-check PASS.
+## Phase 3B checkpoint
+- **Branch:** `feat/phase3b-finalization` (Merged into `main` via PR #12)
+- **Base:** `aa45deacb4094d71daa7d01026561d1241afe3a6`
+- **Main Commit Tested:** `f3128d1d7ab4306a8433556c2bdea9b7a85660cc` (CI Run `36329144232`: `success`)
 - **Public results:** `PublicationService` derives Vietnamese cards from canonical result rows and uses a Discord gateway. Staff `/uma publish-sync` creates/edits/replaces missing messages, persists identities and revisions, and compensates failed new-message DB persistence.
 - **Corrections:** Staff-only confirmation and 10–500 character reason. In-memory engine reset identifies affected downstream matches; any operational activity locks the correction. One transaction updates canonical revision, immutable history, passive participants, engine state, bracket version exactly once, and final outcome when applicable.
 - **Streams/casters:** Separate normalized metadata tables and URL allowlist. Public `/uma stream`, compact `/uma matches` marker, and optional VOD on persistent result cards. Discord's 25-option limit places caster add/remove under `/uma-caster` to preserve prior `/uma` paths.
 - **Operations:** Read-only `/uma doctor`, SQLite `VACUUM INTO` backup with reopen check, and one-time SIGINT/SIGTERM shutdown handling.
-- **Automated tests:** 149 prior + 47 Phase 3B = 196/196 tests in 13 suites; final npm ci, typecheck, build, and diff-check PASS. Real 2-team final, 3-team BYE, 4-team semifinal, locked downstream, rollback, retry, and backup cases covered.
-- **Dependency audit:** Two moderate Vitest/@vitest/mocker development-chain advisories; no automatic breaking upgrade. **LICENSE_REVIEW_REQUIRED** for `tournament-pairings` GPL-3.0-or-later.
-- **Safety:** No Phase 3B live Discord E2E, Test Guild mutation, Production Guild mutation, or production deployment. Draft PR is for human review; do not merge in this run.
+- **Automated tests:** 149 prior + 47 Phase 3B = 196/196 tests in 13 suites; typecheck, build, and diff-check PASS. Real 2-team final, 3-team BYE, 4-team semifinal, locked downstream, rollback, retry, and backup cases covered.
+- **Discord validation:** Completed on dedicated Test Guild (`1435984347814432801`) with verdict `PASS_WITH_LIMITATIONS` (Report: `docs/PHASE3B_DISCORD_E2E_REPORT.md`). Production guild remains untouched.
+- **Dependency audit:** **LICENSE_REVIEW_REQUIRED** for `tournament-pairings` GPL-3.0-or-later.
 
 ## Phase 3A checkpoint
 - **Branch:** `feat/phase3a-results-advancement` (Merged into `main` via PR #10)
@@ -53,7 +54,7 @@ Phase 3B IMPLEMENTED / Awaiting Automated Review & Discord E2E
 - **Automated tests:** 95/95 tests across 10 suites (Typecheck PASS, Build PASS, CI PASS).
 - **Discord validation:** Completed on dedicated Test Guild (`1435984347814432801`) with verdict `PASS_WITH_LIMITATIONS`. Production UMA Discord remains untouched.
 
-## PR #1–#10
+## PR #1–#12
 - PR #1 MERGED into `main` with merge commit `30a21aa`.
 - PR #2 MERGED into `main` with merge commit `2fe7c3c` (explicit Discord resource IDs).
 - PR #3 MERGED into `main` with merge commit `2a81dc6` (historical smoke-test findings).
@@ -64,6 +65,31 @@ Phase 3B IMPLEMENTED / Awaiting Automated Review & Discord E2E
 - PR #8 MERGED into `main` with merge commit `fadf133` (Phase 2B match rooms and lifecycle).
 - PR #9 MERGED into `main` with merge commit `74820a3` (Phase 2B Discord E2E report).
 - PR #10 MERGED into `main` with merge commit `9c9157d` (Phase 3A results, evidence, and advancement).
+- PR #11 MERGED into `main` with merge commit `aa45dea` (Phase 3A Discord E2E retest report metadata hotfix).
+- PR #12 MERGED into `main` with merge commit `f3128d1` (Phase 3B public results, ceremony, livestream, correction, and ops).
+
+## Discord E2E Validation (Phase 3B)
+- **Status:** PASS_WITH_LIMITATIONS
+- **Report:** `docs/PHASE3B_DISCORD_E2E_REPORT.md`
+- **Main Commit Tested:** `f3128d1d7ab4306a8433556c2bdea9b7a85660cc` (CI Run `36329144232`: `success`)
+- **Automated Baseline:** 196 / 196 tests passing across 13 suites (Typecheck PASS, Build PASS)
+- **Verified Lifecycle Stages:**
+  - Slash command deployment: `/uma` (25 subcommands) and `/uma-caster` (2 subcommands: `add`, `remove`) deployed within Discord option limits — PASS
+  - Livestream & caster management: `/uma stream-set`, `/uma stream` public embed, `/uma-caster add/remove` idempotency, compact stream marker in `/uma matches` — PASS
+  - Result reporting & approval: Captain A report with PNG attachment archived, Captain B domain confirmation fallback, referee button approval, match COMPLETED, champion Alpha recorded, version $1 \to 2$ with hash mutation — PASS
+  - Public result & ceremony synchronization: `/uma publish-sync` created result card and champion ceremony in `#🏆・kết-quả-giải-đấu` with zero leaked private data; idempotency verified on immediate re-run — PASS
+  - Result correction lifecycle: `/uma result-correct` with staff confirmation & reason mutated canonical score (Bravo 2–1 Alpha), winner, champion, revision ($1 \to 2$), bracket version ($2 \to 3$), and engine hash; `/uma result-history` verified pre- and post-correction audits — PASS
+  - In-place public edit & recovery: `/uma publish-sync` edited existing messages in-place; manual deletion of result message recovered with single replacement on subsequent sync — PASS
+  - Stream update & clear: VOD link update reflected in public cards; `/uma stream-clear` removed stream while preserving caster, and `/uma publish-sync` removed VOD link in-place — PASS
+  - Operational doctor: `/uma doctor` verified 15 system, DB, channel, and role checks PASS; surfaced expected warning for administrator in test guild — PASS
+  - Cold process restart: Exact DB equality verified across all 20 relational tables (0 diffs); post-restart `/uma doctor` and `/uma publish-sync` verified zero drift — PASS
+  - Backup operation: `node dist/operations/backup.js` generated verified snapshot (`PRAGMA quick_check = ok`, 27 tables); overwrite refusal confirmed — PASS
+  - Privacy & production isolation: Zero internal IDs, thread IDs, attachments, player UIDs, or contacts leaked; Production Guild `1435278955941986540` strictly untouched — PASS
+- **Limitations:**
+  1. `AUTHORIZATION_SEPARATION_NOT_MANUALLY_VALIDATED`: Single Discord test account (`𝑷𝒉𝒖𝒄 𝑽𝒐 💙`, Server Owner / Administrator) simultaneously acted as Captain A, Staff administrator, and assigned Referee. Automated authorization separation is comprehensively verified in test suites.
+  2. `SECOND_CAPTAIN_RESULT_INTERACTION_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); opponent confirmation was executed via canonical domain fallback (`ResultService.confirm`) rather than physical Discord UI button interaction.
+  3. `DOWNSTREAM_LOCK_RECONCILIATION_NOT_LIVE_DISCORD_VALIDATED`: Live Discord E2E was executed on a 2-team final fixture. Downstream match lock reconciliation (`CORRECTION_LOCKED` when downstream matches have progressed) is verified comprehensively in automated test suites (`tests/phase3b_operations.test.ts`).
+  4. `BOT_HAS_ADMINISTRATOR_IN_TEST_GUILD`: The test bot has Administrator permissions in the dedicated test guild for smoke testing; `/uma doctor` correctly surfaced a warning. Production requires granular permissions per `docs/PRODUCTION_DEPLOYMENT_CHECKLIST.md`.
 
 ## Discord E2E Validation (Phase 3A)
 - **Status:** PASS_WITH_LIMITATIONS
@@ -110,10 +136,10 @@ Phase 3B IMPLEMENTED / Awaiting Automated Review & Discord E2E
   2. `SECOND_CAPTAIN_READY_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); readiness was confirmed via canonical domain fallback (`MatchService.confirmReady`) rather than physical Discord UI button interaction.
 
 ## Last Safe Checkpoint
-Main commit `aa45dea` has successful CI run `36325283466`; Phase 3A Discord E2E is `PASS_WITH_LIMITATIONS`. Phase 3B implementation is on the review branch, not deployed.
+Main commit `f3128d1d7ab4306a8433556c2bdea9b7a85660cc` has successful CI run `36329144232`; Phase 3B Discord E2E is `PASS_WITH_LIMITATIONS`.
 
 ## Exact Next Action
-Review the Phase 3B Draft PR and automated CI. After merge, run a separate authorized Phase 3B Discord E2E, resolve the license gate, and obtain explicit production release approval.
+Review and merge documentation PR `docs/phase3b-e2e`. Address dependency licensing review gate (`LICENSE_REVIEW_REQUIRED` for `tournament-pairings` GPL-3.0-or-later) and obtain explicit release approval before production deployment.
 
 ## Branch
-`feat/phase3b-finalization`
+`docs/phase3b-e2e`
