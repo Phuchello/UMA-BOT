@@ -1,7 +1,10 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 1.6.1 Complete / Awaiting Human Merge Decision
+Phase 1 COMPLETE / Awaiting Discord E2E Smoke Test
+
+## PR #1
+MERGED into `main` with merge commit `30a21aa` (merge commit strategy). No Discord deployment or smoke test has been performed.
 
 ## Phase 0 Result
 - **Classification:** `USE_WITH_ADAPTER`
@@ -13,6 +16,7 @@ Phase 1.6.1 Complete / Awaiting Human Merge Decision
 
 ## Phase 1, 1.5, 1.6 & 1.6.1 Result
 - **Status:** Complete (58/58 tests passing across 6 suites, 100% pass rate)
+- **Technical gate:** Registration domain, BTC review, correction lifecycle, persisted tournament capacity, and validated engine adapter are complete. Typecheck and build pass on merged `main`.
 - **Database Engine:** Node.js native `node:sqlite` (`DatabaseSync` with WAL mode & foreign keys enabled). Synchronous, zero-C++ compiler dependency.
 - **Schema (Phase 1.6):** Non-unique indexes only. Active-only uniqueness (PENDING/APPROVED/NEEDS_CORRECTION) enforced transactionally inside `BEGIN IMMEDIATE TRANSACTION`. REJECTED/WITHDRAWN rows free their identifier slots.
 - **Tournament Identity Separation:** Decoupled `ACTIVE_TOURNAMENT_ID` from Discord `DISCORD_GUILD_ID`.
@@ -24,7 +28,7 @@ Phase 1.6.1 Complete / Awaiting Human Merge Decision
 - **CI Setup:** GitHub Actions workflow in `.github/workflows/ci.yml`.
 - **Single-Instance Assumption:** Documented in `docs/ARCHITECTURE.md` Section 6.
 
-## Completed Commits (feat/phase0-phase1)
+## Completed Commits (feat/phase0-phase1 → main)
 1. `6be5dac` — `chore: initialize UMA Tournament Bot workspace` (main)
 2. `91cdd05` — `test: validate tournament engine for 15-team bracket`
 3. `b41cd3f` — `feat: add team registration domain and btc approval workflow`
@@ -35,19 +39,21 @@ Phase 1.6.1 Complete / Awaiting Human Merge Decision
 8. `454272f` — `docs: align phase1 claims with implementation`
 9. `3107dc6` — `fix: active-only uniqueness, max-teams bootstrap, panel ux, phase 1.6 tests`
 10. `206cc3c` — `fix: use persisted tournament capacity as runtime source of truth`
+11. `3626a16` — `docs: finalize phase1 checkpoint metadata`
+12. `30a21aa` — merge PR #1 into `main`
 
 ## Remaining Issues / Risks
 - Third-party dependency `tournament-pairings` is GPL-3.0-or-later. It is architecturally decoupled behind `TournamentEngine` to allow future engine replacement if a permissive license is required.
 - Local dev databases created before Phase 1.6 must be deleted (old UNIQUE indexes are incompatible with new schema intent).
 
 ## CI Status
-GREEN. GitHub Actions run `36287888779` for Phase 1.6 commit `3107dc6` completed with conclusion `success`. For Phase 1.6.1 commit `206cc3c`, push run `36288284611` and PR run `36288286859` both completed with conclusion `success`. Workflow in `.github/workflows/ci.yml` runs typecheck, vitest, and build on Node 22.
+GREEN. GitHub Actions main-branch run `36289338024` for merge commit `30a21aa` completed with conclusion `success`. On merged `main`, `npm ci`, typecheck, all 58 tests across 6 suites, and build also passed locally. Workflow in `.github/workflows/ci.yml` runs typecheck, vitest, and build on Node 22.
 
 ## Last Safe Checkpoint
-Phase 1.6.1 runtime capacity patch pushed as `206cc3c`; all 58 automated tests passing; zero build/typecheck errors; push and PR CI green. PR #1 remains Draft with human review and Ready for Review unchecked.
+PR #1 merged into `main` as `30a21aa`. Phase 1 technical verification is green locally and in GitHub Actions. Discord E2E smoke test remains unexecuted; plan is in `docs/PHASE1_DISCORD_SMOKE_TEST_PLAN.md`.
 
 ## Exact Next Action
-Human review of Draft PR #1. If accepted, the maintainer marks it Ready for Review and merges manually. Then begin Phase 2 from updated `main`.
+Run the controlled Phase 1 Discord smoke test only after separate human approval. Do not start Phase 2 or deploy to the production UMA Discord server.
 
 ## Branch
-`feat/phase0-phase1`
+`main`
