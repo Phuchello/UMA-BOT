@@ -254,7 +254,7 @@ describe('Phase 2B match lifecycle from the real Phase 2A adapter', () => {
     expect(live.startedBy).toBe('referee');
     await expect(h.service.startMatch(tid, match.id, thread, 'referee', false)).rejects.toThrow(MatchError);
     expect(MatchUI.starterButtons(live)).toEqual([]);
-    expect(MatchUI.starterEmbed(live).toJSON().footer?.text).toContain('Phase 3');
+    expect(MatchUI.starterEmbed(live).toJSON().footer?.text).toContain('/uma report-result');
   });
 
   it('allows staff to start a ready match without a referee identity', async () => {

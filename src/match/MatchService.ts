@@ -79,7 +79,7 @@ export class MatchService {
     const result = this.repo.transaction(() => {
       this.requireProgress(tournamentId);
       const match = this.bySelector(tournamentId, round, number);
-      if (match.status === 'WAITING' || match.status === 'LIVE') {
+      if (match.status === 'WAITING' || match.status === 'LIVE' || match.status === 'COMPLETED') {
         throw new MatchError('INVALID_STATE', 'Chỉ gán trọng tài cho trận đã xác định đội và chưa bắt đầu.');
       }
       const inserted = this.repo.assignReferee(match, refereeId, actor, this.now());
@@ -223,7 +223,7 @@ export class MatchService {
     const phase = this.repo.tournamentStatus(tournamentId);
     for (const match of this.repo.list(tournamentId)) {
       const label = `R${match.round}-M${match.number}`;
-      if (!['WAITING', 'READY', 'ROOM_OPEN', 'SCHEDULED', 'READY_TO_START', 'LIVE'].includes(match.status)) {
+      if (!['WAITING', 'READY', 'ROOM_OPEN', 'SCHEDULED', 'READY_TO_START', 'LIVE', 'COMPLETED'].includes(match.status)) {
         throw new MatchError('CORRUPT_MATCH', `Trạng thái trận ${label} không hợp lệ.`);
       }
       const both = !!match.team1 && !!match.team2;
@@ -242,7 +242,12 @@ export class MatchService {
           (match.status === 'LIVE' && (!both || !room || !schedule || !ready || match.startedAt === null || !match.startedBy))) {
         throw new MatchError('CORRUPT_MATCH', `Dữ liệu trận ${label} không nhất quán (${match.status}).`);
       }
-      if (phase !== 'in_progress' && !['WAITING', 'READY'].includes(match.status)) {
+      if ((match.status === 'COMPLETED') !== !!match.result ||
+          (match.status === 'COMPLETED' && (!both || !room || !schedule || !ready || match.startedAt === null || !match.startedBy ||
+            ![match.team1!.id, match.team2!.id].includes(match.result!.winnerTeamId)))) {
+        throw new MatchError('CORRUPT_MATCH', `Dữ liệu trận ${label} không nhất quán (${match.status}).`);
+      }
+      if (!['in_progress', 'completed'].includes(phase ?? '') && !['WAITING', 'READY'].includes(match.status)) {
         throw new MatchError('CORRUPT_PHASE', `Trận ${label} đã vận hành trước khi giải bắt đầu.`);
       }
     }

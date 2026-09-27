@@ -15,15 +15,16 @@ Vietnamese-first Discord tournament system tailored specifically for UMA Club.
 - **Phase 0 (Tournament Engine Validation):** Complete (`USE_WITH_ADAPTER`)
 - **Phase 1 (Registration):** Complete; Discord E2E passed with documented limitations.
 - **Phase 2A (Lock, Check-in, Draw & Bracket):** Complete; Discord E2E passed with documented limitations.
-- **Phase 2B (Match Rooms & Lifecycle):** Implemented; automated review and Discord E2E pending.
-- **Phase 3 (Results, Evidence & Advancement):** Deferred.
+- **Phase 2B (Match Rooms & Lifecycle):** Complete; Discord E2E passed with documented limitations.
+- **Phase 3A (Results, Evidence & Advancement):** Implemented; automated review and Discord E2E pending.
+- **Phase 3B (Public Results, Ceremony, Livestream & Final Hardening):** Deferred within Phase 3.
 
 *Note: Features not yet built are strictly marked as pending or planned. Unfinished features are never claimed as operational.*
 
 ## Architecture Overview
 
 The system is built as a standalone Discord application with clean separation of concerns:
-- **Discord Bot Layer (`src/bot/`):** Registration and Phase 2A commands plus `/uma start`, `/uma match-referee`, `/uma rooms-create`, `/uma match-schedule`, and `/uma matches`; private match-room buttons stop at LIVE.
+- **Discord Bot Layer (`src/bot/`):** Registration, match rooms, and Phase 3A result commands. Private match rooms support screenshot reports, opponent confirmation/dispute, referee adjudication and results up to `COMPLETED`.
 - **Tournament Engine Adapter (`src/tournament/`):** Application-owned `TournamentEngine` interface serving as an architectural decoupling boundary to isolate bracket mechanics and provide dependency replacement flexibility.
 - **Registration & Approval Domain (`src/registration/`):** Normalized relational storage (`node:sqlite`) enforcing strict domain invariants (5 starters, unique UIDs, atomic capacity limits, and multi-tournament separation).
 - **Concurrency & Idempotency:** Guaranteed single-state transitions with race condition locks for BTC staff actions and team resubmissions.
@@ -68,7 +69,9 @@ Outside `NODE_ENV=test`, the Discord application, guild, channel, and staff role
 | `TOURNAMENT_ADMIN_ROLE_IDS` | Comma-separated staff role IDs (at least one) |
 | `DATABASE_PATH` | Path to SQLite database file (e.g. `data/tournament.sqlite`) |
 
-The bot needs View Channel, Send Messages, Create Private Threads, Send Messages in Threads, Manage Threads, Read Message History, and Embed Links in the match hub. Do not grant Administrator to the bot. See [Discord's thread permissions guide](https://support.discord.com/hc/en-us/articles/4403205878423-Threads-FAQ). Staff use `/uma start`, assign a referee by `round` and `match`, and run `/uma rooms-create`. Staff schedule with `YYYY-MM-DD HH:mm` in `Asia/Ho_Chi_Minh`; each captain confirms ready in the private room, then its referee or staff starts the match. Scores and advancement are planned for Phase 3.
+The bot needs View Channel, Send Messages, Create Private Threads, Send Messages in Threads, Manage Threads, Read Message History, Attach Files, and Embed Links in the match hub. Do not grant Administrator to the bot. See [Discord's thread permissions guide](https://support.discord.com/hc/en-us/articles/4403205878423-Threads-FAQ). Staff use `/uma start`, assign a referee by `round` and `match`, and run `/uma rooms-create`. Staff schedule with `YYYY-MM-DD HH:mm` in `Asia/Ho_Chi_Minh`; each captain confirms ready in the private room, then its referee or staff starts the match.
+
+For Phase 3A, a participating captain uses `/uma report-result my-score:<0–2> opponent-score:<0–2> evidence:<image>` inside a LIVE private match room. The bot archives a PNG, JPEG or WebP screenshot (at most 10 MiB) in that room. The opposing captain can confirm or dispute; only the assigned referee or staff can approve, reject or resolve a dispute. `/uma result-resolve` accepts Team A/Team B scores and a reason; `/uma result-refresh` repairs Discord cards from saved state. `/uma results` shows approved scores without private evidence. Approved results advance the engine and are immutable in Phase 3A.
 
 ### Running Tests
 
@@ -95,3 +98,4 @@ npm start
 - `docs/PHASE1_5_HARDENING_REPORT.md`: Phase 1.5 hardening and CI verification report
 - `docs/PHASE2A_IMPLEMENTATION_REPORT.md`: Lock, check-in, draw, bracket and persistence design
 - `docs/PHASE2B_IMPLEMENTATION_REPORT.md`: Match state, private rooms, scheduling, readiness and restart design
+- `docs/PHASE3A_IMPLEMENTATION_REPORT.md`: Evidence, referee adjudication, engine advancement and champion persistence

@@ -1,7 +1,19 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 2B E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 3 Planning
+Phase 3A IMPLEMENTED / Awaiting Automated Review & Discord E2E
+
+## Phase 3A checkpoint
+- **Branch:** `feat/phase3a-results-advancement`
+- **Base:** `74820a3a691aca3184bfe671b91c9bd5475faf3b` (116/116 tests, 11 suites; main CI `36303976002` success)
+- **Result states:** `PENDING → CONFIRMED → APPROVED`, `PENDING → DISPUTED → APPROVED`, or open → `REJECTED`; match `LIVE → COMPLETED`; tournament `in_progress → completed`.
+- **Evidence:** Discord attachment images are reuploaded into the private match room; archived message and attachment metadata survive restart. Source URLs are not persisted.
+- **BO3:** Only 2–0, 2–1, 0–2 and 1–2 are accepted, mapped from captain-relative input to engine team order.
+- **Authority and engine:** Only assigned referee/staff approval restores the application-owned engine, reports the result and atomically persists canonical result, engine state and one bracket-version increment.
+- **Progression:** Real three-team BYE and four-team semifinal tests preserve downstream application/engine match IDs and advance winners into `WAITING → READY`.
+- **Champion:** Final engine completion persists the champion, runner-up and final match in `tournament_outcomes` and closes the tournament.
+- **Automated tests:** 149/149 across 12 suites locally (116 previous + 33 Phase 3A); typecheck and build pass. Draft PR CI pending.
+- **Discord validation:** No Phase 3A live Discord connection yet. Production guild remains untouched.
 
 ## Phase 2B checkpoint
 - **Branch:** `feat/phase2b-match-lifecycle` (Merged into `main` via PR #8)
@@ -29,7 +41,7 @@ Phase 2B E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 3 Planning
 - **Automated tests:** 95/95 tests across 10 suites (Typecheck PASS, Build PASS, CI PASS).
 - **Discord validation:** Completed on dedicated Test Guild (`1435984347814432801`) with verdict `PASS_WITH_LIMITATIONS`. Production UMA Discord remains untouched.
 
-## PR #1–#8
+## PR #1–#9
 - PR #1 MERGED into `main` with merge commit `30a21aa`.
 - PR #2 MERGED into `main` with merge commit `2fe7c3c` (explicit Discord resource IDs).
 - PR #3 MERGED into `main` with merge commit `2a81dc6` (historical smoke-test findings).
@@ -38,6 +50,7 @@ Phase 2B E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 3 Planning
 - PR #6 MERGED into `main` with merge commit `67d6a71` (Phase 2A check-in, draw, and bracket).
 - PR #7 MERGED into `main` with merge commit `4abc080` (Phase 2A Discord E2E report).
 - PR #8 MERGED into `main` with merge commit `fadf133` (Phase 2B match rooms and lifecycle).
+- PR #9 MERGED into `main` with merge commit `74820a3` (Phase 2B Discord E2E report).
 
 ## Discord E2E Validation (Phase 2B)
 - **Status:** PASS_WITH_LIMITATIONS
@@ -70,10 +83,10 @@ Phase 2B E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 3 Planning
   2. `SECOND_CAPTAIN_READY_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); readiness was confirmed via canonical domain fallback (`MatchService.confirmReady`) rather than physical Discord UI button interaction.
 
 ## Last Safe Checkpoint
-Main commit `fadf133` has successful CI run `36301923673`; Phase 2B Discord E2E is `PASS_WITH_LIMITATIONS`.
+Main commit `74820a3` has successful CI run `36303976002`; Phase 2B Discord E2E is `PASS_WITH_LIMITATIONS`.
 
 ## Exact Next Action
-Open Draft PR with Phase 2B Discord E2E report. Await human review and Phase 3 planning. Do not start Phase 3 yet.
+Review the Phase 3A Draft PR and CI. After merge, run a separate Phase 3A Discord E2E. Do not start Phase 3B.
 
 ## Branch
-`docs/phase2b-e2e-retest`
+`feat/phase3a-results-advancement`

@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import type { ParsedPlayerInput } from './RegistrationParser.js';
 
 export type TeamStatus = 'DRAFT' | 'PENDING' | 'NEEDS_CORRECTION' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
-export type TournamentStatus = 'registration_open' | 'checkin_open' | 'bracket_ready' | 'in_progress';
+export type TournamentStatus = 'registration_open' | 'checkin_open' | 'bracket_ready' | 'in_progress' | 'completed';
 
 export const ACTIVE_CAPACITY_STATUSES: TeamStatus[] = ['PENDING', 'APPROVED', 'NEEDS_CORRECTION'];
 

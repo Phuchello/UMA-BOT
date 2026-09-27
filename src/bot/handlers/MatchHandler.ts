@@ -56,7 +56,7 @@ export class MatchHandler {
           : '✅ Đội của bạn đã xác nhận sẵn sàng.');
       } else {
         await this.service.startMatch(tournamentId, matchId, interaction.channelId, interaction.user.id, this.isStaff(interaction));
-        await interaction.editReply('🔴 Trận đấu đã bắt đầu. Báo kết quả sẽ được mở ở Phase 3.');
+        await interaction.editReply('🔴 Trận đấu đã bắt đầu. Dùng /uma report-result và đính kèm ảnh kết quả.');
       }
     } catch (error) { await this.respondError(interaction, error); }
   }

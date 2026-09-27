@@ -6,7 +6,8 @@ const safe = (value: string) => value.slice(0, 48).replace(/[\r\n]/g, ' ').repla
 const label = (match: MatchRecord) => `R${match.round}-M${match.number}`;
 const stateLabel: Record<MatchState, string> = {
   WAITING: 'Chờ xác định đội', READY: 'Sẵn sàng mở phòng', ROOM_OPEN: 'Đã mở phòng',
-  SCHEDULED: 'Đã lên lịch', READY_TO_START: 'Hai đội đã sẵn sàng', LIVE: '🔴 TRẬN ĐẤU ĐANG DIỄN RA'
+  SCHEDULED: 'Đã lên lịch', READY_TO_START: 'Hai đội đã sẵn sàng', LIVE: '🔴 TRẬN ĐẤU ĐANG DIỄN RA',
+  COMPLETED: '✅ TRẬN ĐẤU HOÀN TẤT'
 };
 
 export class MatchUI {
@@ -17,7 +18,7 @@ export class MatchUI {
     const schedule = match.scheduledAt === null ? 'Chưa lên lịch'
       : `<t:${Math.floor(match.scheduledAt / 1000)}:F> • <t:${Math.floor(match.scheduledAt / 1000)}:R>`;
     const ready = (side: MatchRecord['team1']) => side && match.readyTeamIds.includes(side.id) ? '✅ Sẵn sàng' : '⏳ Chưa xác nhận';
-    return new EmbedBuilder().setColor(match.status === 'LIVE' ? 0xEF4444 : 0x2563EB)
+    const embed = new EmbedBuilder().setColor(match.status === 'COMPLETED' ? 0x22C55E : match.status === 'LIVE' ? 0xEF4444 : 0x2563EB)
       .setTitle(`⚔️ UMA CUP — ${label(match)}`)
       .addFields(
         { name: 'Team A', value: team(match.team1), inline: true },
@@ -30,11 +31,16 @@ export class MatchUI {
         { name: 'Readiness', value: `Team A: ${ready(match.team1)}\nTeam B: ${ready(match.team2)}` },
         { name: 'State', value: stateLabel[match.status] }
       )
-      .setFooter({ text: match.status === 'LIVE' ? 'Báo kết quả sẽ được mở ở Phase 3.' : 'UMA CUP • Match room' });
+      .setFooter({ text: match.status === 'LIVE' ? 'Dùng /uma report-result và đính kèm ảnh kết quả.' : 'UMA CUP • Match room' });
+    if (match.result) {
+      const winner = match.result.winnerTeamId === match.team1?.id ? match.team1.name : match.team2?.name ?? '?';
+      embed.addFields({ name: 'Kết quả chính thức', value: `${match.result.team1Score}–${match.result.team2Score} • Thắng: ${safe(winner)}` });
+    }
+    return embed;
   }
 
   public static starterButtons(match: MatchRecord): ActionRowBuilder<ButtonBuilder>[] {
-    if (match.status === 'LIVE') return [];
+    if (match.status === 'LIVE' || match.status === 'COMPLETED') return [];
     return [new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId(`match_ready_${match.id}`).setLabel('✅ Sẵn sàng')
         .setStyle(ButtonStyle.Success).setDisabled(match.status !== 'SCHEDULED'),
@@ -52,7 +58,8 @@ export class MatchUI {
         const left = match.team1 ? safe(match.team1.name) : 'Chờ xác định';
         const right = match.team2 ? safe(match.team2.name) : 'Chờ xác định';
         const time = match.scheduledAt === null ? '' : ` • <t:${Math.floor(match.scheduledAt / 1000)}:F>`;
-        return `**${label(match)}** — ${left} vs ${right}\n${stateLabel[match.status]}${time}`;
+        const score = match.result ? ` ${match.result.team1Score}–${match.result.team2Score}` : '';
+        return `**${label(match)}** — ${left}${score} ${match.result ? '' : 'vs '}${right}\n${stateLabel[match.status]}${time}`;
       });
       return new EmbedBuilder().setColor(0x3B82F6).setTitle(`⚔️ UMA CUP — Vòng ${round}`)
         .setDescription(lines.join('\n') || 'Chưa có trận.');
@@ -64,6 +71,6 @@ export class MatchUI {
     return `\n• **Tổng trận:** ${total}\n• **WAITING:** ${counts.WAITING}` +
       `\n• **READY:** ${counts.READY}\n• **ROOM_OPEN:** ${counts.ROOM_OPEN}` +
       `\n• **SCHEDULED:** ${counts.SCHEDULED}\n• **READY_TO_START:** ${counts.READY_TO_START}` +
-      `\n• **LIVE:** ${counts.LIVE}`;
+      `\n• **LIVE:** ${counts.LIVE}\n• **COMPLETED:** ${counts.COMPLETED}`;
   }
 }

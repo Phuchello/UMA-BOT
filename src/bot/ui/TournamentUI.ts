@@ -6,7 +6,7 @@ const phaseLabel: Record<string, string> = {
   registration_open: 'Đang mở đăng ký',
   checkin_open: 'Đang check-in',
   bracket_ready: 'Đã bốc thăm nhánh đấu',
-  in_progress: 'Đang thi đấu'
+  in_progress: 'Đang thi đấu', completed: 'Đã kết thúc'
 };
 
 const safeName = (name: string) => {
