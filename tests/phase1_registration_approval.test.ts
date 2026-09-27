@@ -178,7 +178,7 @@ describe('Phase 1: Team Registration & BTC Approval Workflow', () => {
       });
 
       expect(dupResult.success).toBe(false);
-      expect(dupResult.error).toContain('đã được sử dụng trong giải đấu này');
+      expect(dupResult.error).toContain('đã được sử dụng bởi một đội đang hoạt động trong giải đấu này');
     });
 
     it('rejects duplicate team abbreviation inside the same tournament', () => {

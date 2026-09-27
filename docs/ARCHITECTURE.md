@@ -114,8 +114,13 @@ CREATE TABLE teams (
   updated_at INTEGER NOT NULL
 );
 
-CREATE UNIQUE INDEX idx_teams_tourney_name ON teams(tournament_id, name);
-CREATE UNIQUE INDEX idx_teams_tourney_abbr ON teams(tournament_id, abbreviation);
+-- Non-unique performance indexes.
+-- Active-only uniqueness (PENDING/APPROVED/NEEDS_CORRECTION) is enforced
+-- transactionally inside TeamRepository.registerTeam / resubmitCorrectedTeam.
+-- REJECTED / WITHDRAWN rows do NOT hold uniqueness slots — same name/tag/UID
+-- may be freely re-registered after rejection or withdrawal.
+CREATE INDEX idx_teams_tourney_name    ON teams(tournament_id, name);
+CREATE INDEX idx_teams_tourney_abbr    ON teams(tournament_id, abbreviation);
 CREATE INDEX idx_teams_tourney_captain ON teams(tournament_id, captain_discord_id);
 
 CREATE TABLE players (
@@ -130,7 +135,8 @@ CREATE TABLE players (
   created_at INTEGER NOT NULL
 );
 
-CREATE UNIQUE INDEX idx_players_tourney_uid ON players(tournament_id, game_uid);
+-- Non-unique UID index. Uniqueness against active teams enforced transactionally.
+CREATE INDEX idx_players_tourney_uid ON players(tournament_id, game_uid);
 
 CREATE TABLE audit_logs (
   id TEXT PRIMARY KEY,
@@ -189,7 +195,26 @@ When 15 of 16 slots are filled and two captains attempt to register simultaneous
 
 ---
 
-## 6. Future Phase Roadmap (Deferred)
+## 6. Single-Instance Deployment Assumption (v1)
+
+> **IMPORTANT:** UMA Tournament Bot v1 is designed and tested under the assumption that **exactly ONE bot process** runs against **ONE SQLite file** at any point in time.
+
+### What this means in practice
+- `node:sqlite`'s `DatabaseSync` is synchronous within a single Node.js event loop.
+- `BEGIN IMMEDIATE TRANSACTION` inside `TeamRepository` acquires a write lock immediately, serializing concurrent within-process operations (e.g., two button interactions processed in the same tick).
+- This is **NOT** a multi-process or multi-server concurrency solution. Two separate bot processes pointing at the same `.sqlite` file could produce `SQLITE_BUSY` contention or write conflicts.
+
+### If multi-instance is introduced in the future
+- Review all `BEGIN IMMEDIATE` transaction retry policies.
+- Consider upgrading to a client/server database (e.g., PostgreSQL) or adding a `busyTimeout` / exponential back-off for SQLite.
+- Update this section with the revised concurrency model.
+
+### Current scope
+For UMA Club's scale (10–15 teams, one bot instance per server), single-process SQLite is safe, simple, and sufficient.
+
+---
+
+## 7. Future Phase Roadmap (Deferred)
 
 - **Phase 2:** Check-in management, dynamic match thread spawning, live bracket Discord embed updates.
 - **Phase 3:** Match result reporting, screenshot evidence attachment verification, referee dispute handling.

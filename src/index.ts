@@ -1,5 +1,6 @@
 import { getConfig } from './config/env.js';
 import { createDatabase } from './database/Database.js';
+import { TeamRepository } from './registration/TeamRepository.js';
 import { createBotClient, deployCommands } from './bot/client.js';
 
 async function bootstrap() {
@@ -13,15 +14,24 @@ async function bootstrap() {
   const db = createDatabase(config.DATABASE_PATH);
   console.log('📦 Database initialized and schema verified.');
 
-  // 3. Create Bot Client
+  // 3. Bootstrap Active Tournament
+  // This MUST happen before any registration is accepted, so that registerTeam()
+  // always finds the tournament with the correct max_teams from config (not a
+  // hardcoded default). If the tournament already exists, ensureTournament is a no-op.
+  const repo = new TeamRepository(db);
+  const tournamentDisplayName = config.TOURNAMENT_NAME ?? `UMA Cup (${config.ACTIVE_TOURNAMENT_ID})`;
+  repo.ensureTournament(config.ACTIVE_TOURNAMENT_ID, tournamentDisplayName, config.MAX_TEAMS);
+  console.log(`🏆 Tournament "${config.ACTIVE_TOURNAMENT_ID}" ready (capacity: ${config.MAX_TEAMS} teams).`);
+
+  // 4. Create Bot Client
   const { client } = createBotClient(db);
 
-  // 4. Register Commands if run with --deploy flag
+  // 5. Register Commands if run with --deploy flag
   if (process.argv.includes('--deploy')) {
     await deployCommands();
   }
 
-  // 5. Connect to Discord
+  // 6. Connect to Discord
   await client.login(config.DISCORD_TOKEN);
 }
 

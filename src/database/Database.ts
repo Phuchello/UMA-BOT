@@ -47,10 +47,21 @@ export function initializeSchema(db: DatabaseSync): void {
       updated_at INTEGER NOT NULL
     );
 
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_tourney_name 
+    -- Non-unique indexes for query performance only.
+    -- IMPORTANT: name/abbreviation uniqueness is enforced TRANSACTIONALLY
+    -- (inside BEGIN IMMEDIATE TRANSACTION) in TeamRepository, scoped to
+    -- ACTIVE statuses (PENDING, APPROVED, NEEDS_CORRECTION) only.
+    -- REJECTED / WITHDRAWN rows do NOT occupy uniqueness slots, so the
+    -- same name/tag/UID may be re-registered after rejection or withdrawal.
+    --
+    -- NOTE FOR DEVELOPERS: If you are running a local dev database that was
+    -- created before Phase 1.6 you MUST delete data/tournament.sqlite and
+    -- let the bot recreate it, because the old UNIQUE indexes cannot be
+    -- dropped with IF NOT EXISTS schema guards alone.
+    CREATE INDEX IF NOT EXISTS idx_teams_tourney_name
       ON teams(tournament_id, name);
 
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_tourney_abbr 
+    CREATE INDEX IF NOT EXISTS idx_teams_tourney_abbr
       ON teams(tournament_id, abbreviation);
 
     CREATE INDEX IF NOT EXISTS idx_teams_tourney_captain
@@ -68,7 +79,9 @@ export function initializeSchema(db: DatabaseSync): void {
       created_at INTEGER NOT NULL
     );
 
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_players_tourney_uid 
+    -- Non-unique index for UID lookups; uniqueness enforced transactionally
+    -- against active teams only (see TeamRepository.registerTeam).
+    CREATE INDEX IF NOT EXISTS idx_players_tourney_uid
       ON players(tournament_id, game_uid);
 
     CREATE TABLE IF NOT EXISTS audit_logs (

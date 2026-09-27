@@ -13,7 +13,18 @@ export class RegistrationUI {
   /**
    * Main registration portal panel for #đăng-ký-thi-đấu
    */
-  public static createRegistrationPanelEmbed(approvedCount: number, maxTeams: number = 16): EmbedBuilder {
+  /**
+   * Main registration portal panel for #đăng-ký-thi-đấu
+   * Shows full capacity breakdown: active (PENDING+APPROVED+NEEDS_CORRECTION),
+   * approved-only, pending/correction, and remaining slots.
+   */
+  public static createRegistrationPanelEmbed(
+    activeCount: number,
+    approvedCount: number,
+    pendingOrCorrectionCount: number,
+    maxTeams: number = 16
+  ): EmbedBuilder {
+    const remaining = Math.max(0, maxTeams - activeCount);
     return new EmbedBuilder()
       .setColor(0x00A8FF)
       .setTitle('🏆 UMA CUP — ĐĂNG KÝ THI ĐẤU')
@@ -21,10 +32,14 @@ export class RegistrationUI {
         'Chào mừng các kiện tướng đến với giải đấu Liên Quân Mobile thường niên của **UMA Club**!\n\n' +
         '**📋 THÔNG TIN GIẢI ĐẤU:**\n' +
         '• **Bộ môn:** Liên Quân Mobile 5v5\n' +
-        `• **Số đội đã duyệt:** \`${approvedCount} / ${maxTeams}\`\n` +
         '• **Đội hình chuẩn:** Đúng 5 tuyển thủ chính thức (+ tối đa 2 dự bị)\n' +
         '• **Thể thức:** Single Elimination (Loại trực tiếp)\n' +
         '• **Trạng thái:** 🟢 **ĐANG MỞ ĐĂNG KÝ**\n\n' +
+        '**📊 TÌNH HÌNH ĐĂNG KÝ:**\n' +
+        `• 👥 **Đã đăng ký:** \`${activeCount} / ${maxTeams}\`\n` +
+        `• ✅ **Đã duyệt:** ${approvedCount}\n` +
+        `• ⏳ **Chờ duyệt / chỉnh sửa:** ${pendingOrCorrectionCount}\n` +
+        `• 🟢 **Còn lại:** ${remaining} suất\n\n` +
         '📌 *Đội trưởng vui lòng bấm nút bên dưới để mở đơn đăng ký đội.*'
       )
       .setFooter({ text: 'UMA Tournament System • Vietnamese-First Esports UX' })

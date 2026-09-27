@@ -160,7 +160,7 @@ describe('Phase 1.5 Hardening: Tournament Identity, Correction Lifecycle & Capac
 
       expect(dupName.success).toBe(false);
       expect(dupName.code).toBe('DUPLICATE_TEAM_NAME');
-      expect(dupName.error).toContain('đã được sử dụng trong giải đấu này');
+      expect(dupName.error).toContain('đã được sử dụng bởi một đội đang hoạt động trong giải đấu này');
     });
 
     it('6. Captain may participate in different tournament years', () => {

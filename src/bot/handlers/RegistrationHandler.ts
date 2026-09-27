@@ -359,7 +359,12 @@ export class RegistrationHandler {
         }
 
         const approved = this.teamRepo.listTeams(tournamentId, 'APPROVED');
-        const embed = RegistrationUI.createRegistrationPanelEmbed(approved.length, config.MAX_TEAMS);
+        const pending = this.teamRepo.listTeams(tournamentId, 'PENDING');
+        const correction = this.teamRepo.listTeams(tournamentId, 'NEEDS_CORRECTION');
+        const approvedCount = approved.length;
+        const pendingOrCorrectionCount = pending.length + correction.length;
+        const activeCount = approvedCount + pendingOrCorrectionCount;
+        const embed = RegistrationUI.createRegistrationPanelEmbed(activeCount, approvedCount, pendingOrCorrectionCount, config.MAX_TEAMS);
         const buttons = RegistrationUI.createRegistrationPanelButtons();
 
         await interaction.reply({ embeds: [embed], components: [buttons] });

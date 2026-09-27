@@ -90,7 +90,16 @@ export class TeamRepository {
    * Atomic, capacity-enforcing and race-condition protected team registration.
    */
   public registerTeam(input: RegisterTeamInput): { success: boolean; code?: string; team?: TeamEntity; error?: string } {
-    this.ensureTournament(input.tournamentId, 'UMA Cup');
+    // Tournament must already exist (created during bootstrap via ensureTournament).
+    // registerTeam() does NOT create the tournament to avoid mismatched capacity defaults.
+    const tournament = this.getTournament(input.tournamentId);
+    if (!tournament) {
+      return {
+        success: false,
+        code: 'TOURNAMENT_NOT_FOUND',
+        error: `Giải đấu "${input.tournamentId}" chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.`
+      };
+    }
 
     // Invariant 1: Exactly 5 starters
     if (input.starters.length !== 5) {
@@ -146,9 +155,12 @@ export class TeamRepository {
         };
       }
 
-      // Invariant 4: Team name unique inside this tournament (case-insensitive)
+      // Invariant 4: Team name unique among ACTIVE teams (case-insensitive).
+      // REJECTED / WITHDRAWN rows do not occupy uniqueness slots.
       const existingName = this.db.prepare(`
-        SELECT id FROM teams WHERE tournament_id = ? AND LOWER(name) = LOWER(?)
+        SELECT id FROM teams 
+        WHERE tournament_id = ? AND LOWER(name) = LOWER(?) 
+          AND status IN ('PENDING', 'APPROVED', 'NEEDS_CORRECTION')
       `).get(input.tournamentId, input.name.trim());
 
       if (existingName) {
@@ -156,13 +168,15 @@ export class TeamRepository {
         return {
           success: false,
           code: 'DUPLICATE_TEAM_NAME',
-          error: `Tên đội "${input.name}" đã được sử dụng trong giải đấu này.`
+          error: `Tên đội "${input.name}" đã được sử dụng bởi một đội đang hoạt động trong giải đấu này.`
         };
       }
 
-      // Invariant 5: Abbreviation unique inside this tournament (case-insensitive)
+      // Invariant 5: Abbreviation unique among ACTIVE teams (case-insensitive).
       const existingAbbr = this.db.prepare(`
-        SELECT id FROM teams WHERE tournament_id = ? AND LOWER(abbreviation) = LOWER(?)
+        SELECT id FROM teams 
+        WHERE tournament_id = ? AND LOWER(abbreviation) = LOWER(?) 
+          AND status IN ('PENDING', 'APPROVED', 'NEEDS_CORRECTION')
       `).get(input.tournamentId, input.abbreviation.trim());
 
       if (existingAbbr) {
@@ -170,9 +184,10 @@ export class TeamRepository {
         return {
           success: false,
           code: 'DUPLICATE_ABBREVIATION',
-          error: `Tên viết tắt (TAG) "${input.abbreviation}" đã được sử dụng trong giải đấu.`
+          error: `Tên viết tắt (TAG) "${input.abbreviation}" đã được sử dụng bởi một đội đang hoạt động trong giải đấu.`
         };
       }
+
 
       // Invariant 6: Duplicate UID across active teams in the same tournament
       const allCandidateUids = [...input.starters, ...input.substitutes].map(p => p.gameUid);
@@ -306,10 +321,11 @@ export class TeamRepository {
         };
       }
 
-      // Check name uniqueness (excluding self)
+      // Check name uniqueness among ACTIVE teams (excluding self)
       const nameConflict = this.db.prepare(`
         SELECT id FROM teams 
         WHERE tournament_id = ? AND LOWER(name) = LOWER(?) AND id != ?
+          AND status IN ('PENDING', 'APPROVED', 'NEEDS_CORRECTION')
       `).get(input.tournamentId, input.name.trim(), input.teamId);
 
       if (nameConflict) {
@@ -317,14 +333,15 @@ export class TeamRepository {
         return {
           success: false,
           code: 'DUPLICATE_TEAM_NAME',
-          error: `Tên đội "${input.name}" đã được sử dụng bởi đội khác trong giải đấu.`
+          error: `Tên đội "${input.name}" đã được sử dụng bởi đội khác đang hoạt động trong giải đấu.`
         };
       }
 
-      // Check abbr uniqueness (excluding self)
+      // Check abbr uniqueness among ACTIVE teams (excluding self)
       const abbrConflict = this.db.prepare(`
         SELECT id FROM teams 
         WHERE tournament_id = ? AND LOWER(abbreviation) = LOWER(?) AND id != ?
+          AND status IN ('PENDING', 'APPROVED', 'NEEDS_CORRECTION')
       `).get(input.tournamentId, input.abbreviation.trim(), input.teamId);
 
       if (abbrConflict) {

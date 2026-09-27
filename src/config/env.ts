@@ -16,6 +16,7 @@ const envSchema = z.object({
     ? z.string().default('1435278955941986540')
     : z.string().min(1, 'DISCORD_GUILD_ID is required'),
   ACTIVE_TOURNAMENT_ID: z.string().default('uma-cup-2027'),
+  TOURNAMENT_NAME: z.string().default('UMA Cup 2027'),
   BTC_CHANNEL_ID: z.string().default('1553333896307810325'),
   REGISTRATION_CHANNEL_ID: z.string().default('1553333598747365386'),
   REFEREE_CHANNEL_ID: z.string().default('1553333901122871366'),
