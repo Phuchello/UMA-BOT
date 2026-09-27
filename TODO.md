@@ -44,7 +44,7 @@
 - [x] Generate and restore Single Elimination bracket through the engine adapter
 - [x] Persist stable application match IDs and explicit BYE advancement paths
 - [x] Add public-safe check-in, status and bracket views
-- [ ] Human review and Phase 2A Discord E2E after merge
+- [x] Human review and Phase 2A Discord E2E after merge
 
 ## Phase 2B: Match Rooms / Match Lifecycle (Deferred)
 - [ ] Automated private match threads for captains and referees
