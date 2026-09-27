@@ -2,13 +2,13 @@
 
 **Branch:** `feat/phase0-phase1`  
 **Draft PR:** [#1](https://github.com/Phuchello/UMA-BOT/pull/1)  
-**Status:** AWAITING HUMAN REVIEW — Do NOT merge without approval.
+**Status:** Technical gates green; Draft PR awaiting human review — Do NOT merge without approval.
 
 ---
 
 ## 1. Summary of Changes
 
-Phase 1.6 is the final consistency patch before merging Phase 0 + Phase 1 into `main`.
+Phase 1.6 and its Phase 1.6.1 runtime capacity cleanup complete the pre-merge consistency work before merging Phase 0 + Phase 1 into `main`.
 All changes are **non-feature**: no new user-facing functionality, no bracket logic, no Phase 2 work.
 
 ---
@@ -108,13 +108,13 @@ Added **Section 6** to `docs/ARCHITECTURE.md` documenting:
 
 ## 6. Fix 5 — Clean PR #1 Body (Shell Escaping Artifacts)
 
-PR #1 body was cleaned after the Phase 1.6 push. The merge checklist now records the verified CI result while leaving human review and Ready for Review unchecked.
+PR #1 body was cleaned after the Phase 1.6 push. The merge checklist records CI as complete while leaving human review and Ready for Review unchecked. PR #1 remains Draft.
 
 ---
 
 ## 7. Fix 6 — PROJECT_STATE Commit SHA Accuracy
 
-Phase 1.6 was pushed as `3107dc6` (`fix: active-only uniqueness, max-teams bootstrap, panel ux, phase 1.6 tests`). See `PROJECT_STATE.md` for the full commit history.
+Phase 1.6 was pushed as `3107dc6` (`fix: active-only uniqueness, max-teams bootstrap, panel ux, phase 1.6 tests`). Phase 1.6.1 was pushed as `206cc3c` (`fix: use persisted tournament capacity as runtime source of truth`). See `PROJECT_STATE.md` for the full commit history.
 
 ---
 
@@ -160,7 +160,8 @@ All uniqueness enforcement is transactional, not index-based.
 | `phase1_registration_approval.test.ts` | 19 | ✅ PASS |
 | `phase1_5_hardening.test.ts` | 16 | ✅ PASS |
 | `phase1_6_premerge.test.ts` | 13 | ✅ PASS |
-| **TOTAL** | **56** | **✅ ALL PASS** |
+| `phase1_6_1_capacity.test.ts` | 2 | ✅ PASS |
+| **TOTAL** | **58** | **✅ ALL PASS** |
 
 ### TypeScript / Build
 
@@ -174,6 +175,8 @@ All uniqueness enforcement is transactional, not index-based.
 Phase 1.6 was pushed to `feat/phase0-phase1`. GitHub Actions run `36287888779` for commit `3107dc6` completed with conclusion `success`.
 
 Phase 1.6.1 adds two runtime capacity tests. They verify config drift from 3 to 15 leaves the DB name and capacity unchanged; panel, status, and registration button display 3; the fourth registration is rejected; and missing tournaments produce a clear error.
+
+Phase 1.6.1 commit `206cc3c` was pushed to the same branch. GitHub Actions push run `36288284611` and PR run `36288286859` both completed with conclusion `success`.
 
 ---
 
@@ -190,7 +193,7 @@ Phase 1.6.1 adds two runtime capacity tests. They verify config drift from 3 to 
 ## 12. Verdict
 
 ```
-READY_TO_MERGE — pending:
+READY_TO_MERGE (technical gates green) — pending:
   1. Human review and explicit PR approval
   2. PR #1 marked Ready for Review (not Draft) by maintainer
 ```

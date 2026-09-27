@@ -34,16 +34,17 @@ Phase 1.6.1 Complete / Awaiting Human Merge Decision
 7. `33d8c99` — `ci: add phase1 verification workflow`
 8. `454272f` — `docs: align phase1 claims with implementation`
 9. `3107dc6` — `fix: active-only uniqueness, max-teams bootstrap, panel ux, phase 1.6 tests`
+10. `206cc3c` — `fix: use persisted tournament capacity as runtime source of truth`
 
 ## Remaining Issues / Risks
 - Third-party dependency `tournament-pairings` is GPL-3.0-or-later. It is architecturally decoupled behind `TournamentEngine` to allow future engine replacement if a permissive license is required.
 - Local dev databases created before Phase 1.6 must be deleted (old UNIQUE indexes are incompatible with new schema intent).
 
 ## CI Status
-GREEN. GitHub Actions run `36287888779` for `3107dc6` completed with conclusion `success`. Workflow in `.github/workflows/ci.yml` runs typecheck, vitest, and build on Node 22.
+GREEN. GitHub Actions run `36287888779` for Phase 1.6 commit `3107dc6` completed with conclusion `success`. For Phase 1.6.1 commit `206cc3c`, push run `36288284611` and PR run `36288286859` both completed with conclusion `success`. Workflow in `.github/workflows/ci.yml` runs typecheck, vitest, and build on Node 22.
 
 ## Last Safe Checkpoint
-Phase 1.6.1 runtime capacity patch complete; all 58 automated tests passing; zero build/typecheck errors.
+Phase 1.6.1 runtime capacity patch pushed as `206cc3c`; all 58 automated tests passing; zero build/typecheck errors; push and PR CI green. PR #1 remains Draft with human review and Ready for Review unchecked.
 
 ## Exact Next Action
 Human review of Draft PR #1. If accepted, the maintainer marks it Ready for Review and merges manually. Then begin Phase 2 from updated `main`.
