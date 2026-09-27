@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
-export type MatchState = 'WAITING' | 'READY' | 'ROOM_OPEN' | 'SCHEDULED' | 'READY_TO_START' | 'LIVE';
+export type MatchState = 'WAITING' | 'READY' | 'ROOM_OPEN' | 'SCHEDULED' | 'READY_TO_START' | 'LIVE' | 'COMPLETED';
 export interface MatchTeam { id: string; name: string; abbreviation: string; captainId: string }
 export interface MatchRoom { threadId: string; parentChannelId: string; starterMessageId: string }
 export interface MatchRecord {
@@ -9,6 +9,7 @@ export interface MatchRecord {
   status: MatchState; team1: MatchTeam | null; team2: MatchTeam | null;
   room: MatchRoom | null; scheduledAt: number | null; readyTeamIds: string[];
   refereeIds: string[]; startedAt: number | null; startedBy: string | null;
+  result: { team1Score: number; team2Score: number; winnerTeamId: string; approvedBy: string } | null;
 }
 
 export class MatchRepository {
@@ -47,13 +48,15 @@ export class MatchRepository {
     const row = this.db.prepare(`SELECT m.*, a.name AS a_name, a.abbreviation AS a_abbr, a.captain_discord_id AS a_captain,
         b.name AS b_name, b.abbreviation AS b_abbr, b.captain_discord_id AS b_captain,
         r.discord_thread_id, r.parent_channel_id, r.starter_message_id,
-        s.scheduled_at, st.started_at, st.started_by_discord_id
+        s.scheduled_at, st.started_at, st.started_by_discord_id,
+        result.team1_score, result.team2_score, result.winner_team_id, result.approved_by_discord_id
       FROM tournament_matches m
       LEFT JOIN teams a ON a.id = m.team1_id AND a.tournament_id = m.tournament_id
       LEFT JOIN teams b ON b.id = m.team2_id AND b.tournament_id = m.tournament_id
       LEFT JOIN match_rooms r ON r.match_id = m.id
       LEFT JOIN match_schedules s ON s.match_id = m.id
       LEFT JOIN match_starts st ON st.match_id = m.id
+      LEFT JOIN match_results result ON result.match_id = m.id
       WHERE m.tournament_id = ? AND m.id = ?`).get(tournamentId, matchId) as any;
     if (!row) return null;
     const refs = this.db.prepare('SELECT referee_discord_id FROM match_referee_assignments WHERE match_id = ? ORDER BY referee_discord_id')
@@ -71,7 +74,9 @@ export class MatchRepository {
         starterMessageId: row.starter_message_id } : null,
       scheduledAt: row.scheduled_at === null ? null : Number(row.scheduled_at),
       readyTeamIds: ready.map(item => item.team_id), refereeIds: refs.map(item => item.referee_discord_id),
-      startedAt: row.started_at === null ? null : Number(row.started_at), startedBy: row.started_by_discord_id
+      startedAt: row.started_at === null ? null : Number(row.started_at), startedBy: row.started_by_discord_id,
+      result: row.winner_team_id ? { team1Score: Number(row.team1_score), team2Score: Number(row.team2_score),
+        winnerTeamId: row.winner_team_id, approvedBy: row.approved_by_discord_id } : null
     };
   }
 
@@ -137,7 +142,7 @@ export class MatchRepository {
 
   public counts(tournamentId: string): Record<MatchState, number> {
     const counts: Record<MatchState, number> = { WAITING: 0, READY: 0, ROOM_OPEN: 0,
-      SCHEDULED: 0, READY_TO_START: 0, LIVE: 0 };
+      SCHEDULED: 0, READY_TO_START: 0, LIVE: 0, COMPLETED: 0 };
     const rows = this.db.prepare('SELECT status, COUNT(*) AS n FROM tournament_matches WHERE tournament_id = ? GROUP BY status')
       .all(tournamentId) as any[];
     for (const row of rows) {

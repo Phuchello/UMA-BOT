@@ -27,7 +27,7 @@ async function bootstrap() {
   if (!tournament) throw new Error(`Tournament "${config.ACTIVE_TOURNAMENT_ID}" was not created.`);
   console.log(`🏆 Tournament "${tournament.id}" ready (capacity: ${tournament.maxTeams} teams).`);
   const restored = new TournamentService(new TournamentRepository(db)).restoreBracket(tournament.id);
-  if (['bracket_ready', 'in_progress'].includes(tournament.status) && !restored) {
+  if (['bracket_ready', 'in_progress', 'completed'].includes(tournament.status) && !restored) {
     throw new Error('Bracket-ready tournament has no persisted bracket.');
   }
   if (tournament.status === 'checkin_open' && restored) {
@@ -36,8 +36,9 @@ async function bootstrap() {
   if (restored) console.log(`🏆 Restored ${restored.matches.length} bracket matches without redraw.`);
 
   // 4. Create Bot Client
-  const { client, matchService } = createBotClient(db);
+  const { client, matchService, resultService } = createBotClient(db);
   matchService.validatePersistedState(tournament.id);
+  resultService.validatePersistedState(tournament.id);
 
   // 5. Register Commands if run with --deploy flag
   if (process.argv.includes('--deploy')) {

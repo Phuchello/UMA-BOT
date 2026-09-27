@@ -204,6 +204,56 @@ export function initializeSchema(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS idx_match_audit_match ON match_audit_logs(tournament_id, match_id, timestamp);
     CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL);
 
+    CREATE TABLE IF NOT EXISTS match_result_submissions (
+      id TEXT PRIMARY KEY, tournament_id TEXT NOT NULL, match_id TEXT NOT NULL,
+      submitted_by_discord_id TEXT NOT NULL, submitting_team_id TEXT NOT NULL,
+      team1_score INTEGER NOT NULL, team2_score INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('PENDING','CONFIRMED','DISPUTED','APPROVED','REJECTED')),
+      card_message_id TEXT, rejection_reason TEXT, submitted_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+      FOREIGN KEY(tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE,
+      FOREIGN KEY(tournament_id, submitting_team_id) REFERENCES teams(tournament_id, id)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_result_one_open ON match_result_submissions(match_id)
+      WHERE status IN ('PENDING','CONFIRMED','DISPUTED');
+    CREATE TRIGGER IF NOT EXISTS trg_result_submission_forward BEFORE UPDATE OF status ON match_result_submissions
+      WHEN OLD.status != NEW.status AND NOT (
+        (OLD.status = 'PENDING' AND NEW.status IN ('CONFIRMED','DISPUTED','APPROVED','REJECTED')) OR
+        (OLD.status = 'CONFIRMED' AND NEW.status IN ('APPROVED','REJECTED')) OR
+        (OLD.status = 'DISPUTED' AND NEW.status IN ('APPROVED','REJECTED'))
+      ) BEGIN SELECT RAISE(ABORT, 'invalid result submission transition'); END;
+    CREATE TABLE IF NOT EXISTS result_evidence (
+      submission_id TEXT PRIMARY KEY REFERENCES match_result_submissions(id) ON DELETE CASCADE,
+      discord_message_id TEXT NOT NULL UNIQUE, discord_attachment_id TEXT NOT NULL,
+      filename TEXT NOT NULL, content_type TEXT NOT NULL, size_bytes INTEGER NOT NULL,
+      archived_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS match_result_disputes (
+      submission_id TEXT PRIMARY KEY REFERENCES match_result_submissions(id) ON DELETE CASCADE,
+      raised_by_discord_id TEXT NOT NULL, team_id TEXT NOT NULL,
+      reason TEXT NOT NULL, created_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS match_results (
+      match_id TEXT PRIMARY KEY, tournament_id TEXT NOT NULL,
+      approved_submission_id TEXT NOT NULL UNIQUE REFERENCES match_result_submissions(id),
+      team1_score INTEGER NOT NULL, team2_score INTEGER NOT NULL,
+      winner_team_id TEXT NOT NULL, loser_team_id TEXT NOT NULL,
+      approved_by_discord_id TEXT NOT NULL, approved_at INTEGER NOT NULL,
+      resolution_reason TEXT,
+      FOREIGN KEY(tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS result_audit_logs (
+      id TEXT PRIMARY KEY, tournament_id TEXT NOT NULL, match_id TEXT NOT NULL,
+      submission_id TEXT, actor_discord_id TEXT NOT NULL, action TEXT NOT NULL,
+      previous_status TEXT, new_status TEXT, details TEXT, timestamp INTEGER NOT NULL,
+      FOREIGN KEY(tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS tournament_outcomes (
+      tournament_id TEXT PRIMARY KEY REFERENCES tournaments(id) ON DELETE CASCADE,
+      champion_team_id TEXT NOT NULL, runner_up_team_id TEXT NOT NULL,
+      final_match_id TEXT NOT NULL UNIQUE, completed_at INTEGER NOT NULL,
+      completed_by_discord_id TEXT NOT NULL
+    );
+
     -- The adapter omits automatic BYE matches. Record the advancement path,
     -- not a synthetic playable match or fake team.
     CREATE TABLE IF NOT EXISTS tournament_byes (
@@ -251,8 +301,22 @@ export function initializeSchema(db: DatabaseSync): void {
   }
 
   db.exec(`
+    DROP TRIGGER IF EXISTS trg_tournament_status_insert;
+    DROP TRIGGER IF EXISTS trg_tournament_status_forward;
+    CREATE TRIGGER trg_tournament_status_insert BEFORE INSERT ON tournaments
+      WHEN NEW.status NOT IN ('registration_open','checkin_open','bracket_ready','in_progress','completed')
+      BEGIN SELECT RAISE(ABORT, 'invalid tournament status'); END;
+    CREATE TRIGGER trg_tournament_status_forward BEFORE UPDATE OF status ON tournaments
+      WHEN OLD.status != NEW.status AND NOT (
+        (OLD.status = 'registration_open' AND NEW.status = 'checkin_open') OR
+        (OLD.status = 'checkin_open' AND NEW.status = 'bracket_ready') OR
+        (OLD.status = 'bracket_ready' AND NEW.status = 'in_progress') OR
+        (OLD.status = 'in_progress' AND NEW.status = 'completed')
+      ) BEGIN SELECT RAISE(ABORT, 'invalid tournament status transition'); END;
+    DROP TRIGGER IF EXISTS trg_match_status_insert;
+    DROP TRIGGER IF EXISTS trg_match_status_forward;
     CREATE TRIGGER IF NOT EXISTS trg_match_status_insert BEFORE INSERT ON tournament_matches
-      WHEN NEW.status NOT IN ('WAITING','READY','ROOM_OPEN','SCHEDULED','READY_TO_START','LIVE')
+      WHEN NEW.status NOT IN ('WAITING','READY','ROOM_OPEN','SCHEDULED','READY_TO_START','LIVE','COMPLETED')
       BEGIN SELECT RAISE(ABORT, 'invalid match status'); END;
     CREATE TRIGGER IF NOT EXISTS trg_match_status_forward BEFORE UPDATE OF status ON tournament_matches
       WHEN OLD.status != NEW.status AND NOT (
@@ -260,7 +324,8 @@ export function initializeSchema(db: DatabaseSync): void {
         (OLD.status = 'READY' AND NEW.status = 'ROOM_OPEN') OR
         (OLD.status = 'ROOM_OPEN' AND NEW.status = 'SCHEDULED') OR
         (OLD.status = 'SCHEDULED' AND NEW.status = 'READY_TO_START') OR
-        (OLD.status = 'READY_TO_START' AND NEW.status = 'LIVE')
+        (OLD.status = 'READY_TO_START' AND NEW.status = 'LIVE') OR
+        (OLD.status = 'LIVE' AND NEW.status = 'COMPLETED')
       ) BEGIN SELECT RAISE(ABORT, 'invalid match transition'); END;
   `);
 }

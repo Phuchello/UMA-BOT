@@ -14,10 +14,14 @@ import { MatchRepository } from '../match/MatchRepository.js';
 import { MatchService } from '../match/MatchService.js';
 import { DiscordMatchRoomGateway } from './DiscordMatchRoomGateway.js';
 import { MatchHandler } from './handlers/MatchHandler.js';
+import { ResultRepository } from '../result/ResultRepository.js';
+import { ResultService } from '../result/ResultService.js';
+import { DiscordEvidenceGateway } from './DiscordEvidenceGateway.js';
+import { ResultHandler } from './handlers/ResultHandler.js';
 import { umaCommand } from './commands/umaCommand.js';
 import { getConfig } from '../config/env.js';
 
-export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: TeamRepository; matchService: MatchService } {
+export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: TeamRepository; matchService: MatchService; resultService: ResultService } {
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -28,10 +32,13 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
   const teamRepo = new TeamRepository(db);
   const registrationHandler = new RegistrationHandler(teamRepo, client);
   const tournamentRepo = new TournamentRepository(db);
-  const matchService = new MatchService(new MatchRepository(db), tournamentRepo,
+  const matchRepo = new MatchRepository(db);
+  const matchService = new MatchService(matchRepo, tournamentRepo,
     new TournamentService(tournamentRepo), new DiscordMatchRoomGateway(client));
-  const tournamentHandler = new TournamentHandler(new TournamentService(tournamentRepo), teamRepo, matchService);
+  const resultService = new ResultService(new ResultRepository(db), matchRepo, new DiscordEvidenceGateway(client));
+  const tournamentHandler = new TournamentHandler(new TournamentService(tournamentRepo), teamRepo, matchService, resultService);
   const matchHandler = new MatchHandler(matchService);
+  const resultHandler = new ResultHandler(resultService, matchRepo);
 
   client.on('ready', () => {
     console.log(`🤖 UMA Tournament Bot is online as ${client.user?.tag}!`);
@@ -41,7 +48,9 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
     try {
       if (interaction.isChatInputCommand()) {
         const subcommand = interaction.options.getSubcommand(false);
-        if (['start', 'match-referee', 'rooms-create', 'match-schedule', 'matches'].includes(subcommand ?? '')) {
+        if (['report-result', 'result-resolve', 'result-refresh', 'results'].includes(subcommand ?? '')) {
+          await resultHandler.handleSlashCommand(interaction);
+        } else if (['start', 'match-referee', 'rooms-create', 'match-schedule', 'matches'].includes(subcommand ?? '')) {
           await matchHandler.handleSlashCommand(interaction);
         } else if (['checkin-open', 'check-in', 'checkins', 'draw', 'bracket', 'status'].includes(subcommand ?? '')) {
           await tournamentHandler.handleSlashCommand(interaction);
@@ -49,13 +58,16 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
           await registrationHandler.handleSlashCommand(interaction);
         }
       } else if (interaction.isButton()) {
-        if (interaction.customId.startsWith('match_ready_') || interaction.customId.startsWith('match_start_')) {
+        if (interaction.customId.startsWith('result_')) {
+          await resultHandler.handleButton(interaction);
+        } else if (interaction.customId.startsWith('match_ready_') || interaction.customId.startsWith('match_start_')) {
           await matchHandler.handleButton(interaction);
         } else {
           await registrationHandler.handleButton(interaction);
         }
       } else if (interaction.isModalSubmit()) {
-        await registrationHandler.handleModalSubmit(interaction);
+        if (interaction.customId.startsWith('result_')) await resultHandler.handleModal(interaction);
+        else await registrationHandler.handleModalSubmit(interaction);
       }
     } catch (err) {
       console.error('Error handling interaction:', err);
@@ -68,7 +80,7 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
     }
   });
 
-  return { client, teamRepo, matchService };
+  return { client, teamRepo, matchService, resultService };
 }
 
 export async function deployCommands(): Promise<void> {

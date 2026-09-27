@@ -56,7 +56,17 @@
 - [x] Restart persistence and corruption validation
 - [x] Human review and separate post-merge Phase 2B Discord E2E
 
-## Phase 3: Results / Evidence / Referee / Advancement (Deferred)
-- [ ] Screenshot evidence upload and score submission
-- [ ] BTC/referee result verification and disputes
-- [ ] Score advancement, champion ceremony and livestream integration
+## Phase 3: Results / Evidence / Referee / Advancement
+
+### Phase 3A — Results / Evidence / Referee / Advancement
+- [x] Captain BO3 result reporting with durable private-thread screenshot evidence
+- [x] Opponent confirmation and dispute; referee/staff rejection or adjudication
+- [x] Canonical engine result, stable downstream advancement and bracket versioning
+- [x] Match COMPLETED, tournament completed and champion persistence
+- [x] Restart validation and recovery command for Discord card refresh
+- [ ] Human review and separate post-merge Discord E2E
+
+### Phase 3B — Public Results / Champion Ceremony / Livestream / Final Hardening
+- [ ] Polished public results publishing and champion ceremony
+- [ ] Livestream/caster integration
+- [ ] Guarded approved-result correction policy and production hardening/deployment

@@ -5,10 +5,11 @@ import { getConfig, isStaffMember } from '../../config/env.js';
 import { TournamentUI } from '../ui/TournamentUI.js';
 import type { MatchService } from '../../match/MatchService.js';
 import { MatchUI } from '../ui/MatchUI.js';
+import type { ResultService } from '../../result/ResultService.js';
 
 export class TournamentHandler {
   constructor(private readonly service: TournamentService, private readonly teams: TeamRepository,
-    private readonly matches?: MatchService) {}
+    private readonly matches?: MatchService, private readonly results?: ResultService) {}
 
   public async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const command = interaction.options.getSubcommand();
@@ -45,9 +46,13 @@ export class TournamentHandler {
       } else if (command === 'status') {
         const tournament = this.teams.getTournament(tournamentId);
         const summary = this.service.summary(tournamentId);
-        const matchCounts = summary.status === 'in_progress' && this.matches
+        const matchCounts = ['in_progress', 'completed'].includes(summary.status) && this.matches
           ? MatchUI.statusCounts(this.matches.counts(tournamentId)) : '';
-        await interaction.reply({ content: TournamentUI.statusText(tournamentId, summary, tournament!.maxTeams) + matchCounts, ephemeral: true });
+        const championId = summary.status === 'completed' ? this.results?.outcome(tournamentId)?.championTeamId : null;
+        const champion = championId ? this.matches?.list(tournamentId).flatMap(match => [match.team1, match.team2])
+          .find(team => team?.id === championId)?.name : null;
+        await interaction.reply({ content: TournamentUI.statusText(tournamentId, summary, tournament!.maxTeams) + matchCounts +
+          (champion ? `\n• **Vô địch:** ${champion.replace(/@/g, '@\u200b').slice(0, 80)}` : ''), ephemeral: true });
       }
     } catch (error) {
       if (error instanceof TournamentError) {

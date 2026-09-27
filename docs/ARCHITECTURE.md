@@ -4,6 +4,8 @@
 
 > Phase 2B extension: `MatchService` and `MatchRepository` own the operational match lifecycle. `MatchHandler` handles interactions, `MatchUI` builds Discord views, and `DiscordMatchRoomGateway` isolates private-thread API calls behind a fakeable interface. See [Phase 2B implementation report](PHASE2B_IMPLEMENTATION_REPORT.md). The diagrams below retain the original Phase 1 scope.
 
+> Phase 3A extension: `ResultService` and `ResultRepository` own submission, evidence metadata, referee adjudication, engine advancement and champion persistence. `DiscordEvidenceGateway` owns external upload/card effects and `ResultHandler` owns interactions. See [Phase 3A implementation report](PHASE3A_IMPLEMENTATION_REPORT.md). The diagrams below retain the original Phase 1 scope.
+
 ## 1. System Overview
 
 **UMA Tournament Bot** is an independent, Vietnamese-first Discord tournament management system designed specifically for **UMA Club**. It supports competitive **Liên Quân Mobile 5v5** tournaments at a realistic scale of 10–15 teams (stress capacity up to 16 teams) with a Single Elimination bracket format.
