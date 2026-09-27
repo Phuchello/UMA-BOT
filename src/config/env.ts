@@ -3,10 +3,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const isTestOrCI = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
+
 const envSchema = z.object({
-  DISCORD_TOKEN: z.string().min(1, 'DISCORD_TOKEN is required'),
-  DISCORD_CLIENT_ID: z.string().min(1, 'DISCORD_CLIENT_ID is required'),
-  DISCORD_GUILD_ID: z.string().min(1, 'DISCORD_GUILD_ID is required'),
+  DISCORD_TOKEN: isTestOrCI
+    ? z.string().default('mock_discord_token_ci_test')
+    : z.string().min(1, 'DISCORD_TOKEN is required'),
+  DISCORD_CLIENT_ID: isTestOrCI
+    ? z.string().default('123456789012345678')
+    : z.string().min(1, 'DISCORD_CLIENT_ID is required'),
+  DISCORD_GUILD_ID: isTestOrCI
+    ? z.string().default('1435278955941986540')
+    : z.string().min(1, 'DISCORD_GUILD_ID is required'),
+  ACTIVE_TOURNAMENT_ID: z.string().default('uma-cup-2027'),
   BTC_CHANNEL_ID: z.string().default('1553333896307810325'),
   REGISTRATION_CHANNEL_ID: z.string().default('1553333598747365386'),
   REFEREE_CHANNEL_ID: z.string().default('1553333901122871366'),
@@ -33,6 +42,10 @@ export function getConfig(): EnvConfig {
     parsedConfig = parsed.data;
   }
   return parsedConfig;
+}
+
+export function resetConfigForTesting(): void {
+  parsedConfig = null;
 }
 
 export function isStaffMember(roleIds: string[]): boolean {

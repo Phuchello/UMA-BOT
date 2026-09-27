@@ -53,6 +53,9 @@ export function initializeSchema(db: DatabaseSync): void {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_tourney_abbr 
       ON teams(tournament_id, abbreviation);
 
+    CREATE INDEX IF NOT EXISTS idx_teams_tourney_captain
+      ON teams(tournament_id, captain_discord_id);
+
     CREATE TABLE IF NOT EXISTS players (
       id TEXT PRIMARY KEY,
       team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
