@@ -9,7 +9,7 @@ export interface MatchRecord {
   status: MatchState; team1: MatchTeam | null; team2: MatchTeam | null;
   room: MatchRoom | null; scheduledAt: number | null; readyTeamIds: string[];
   refereeIds: string[]; startedAt: number | null; startedBy: string | null;
-  result: { team1Score: number; team2Score: number; winnerTeamId: string; approvedBy: string } | null;
+  result: { team1Score: number; team2Score: number; winnerTeamId: string; approvedBy: string; revision: number } | null;
 }
 
 export class MatchRepository {
@@ -49,7 +49,7 @@ export class MatchRepository {
         b.name AS b_name, b.abbreviation AS b_abbr, b.captain_discord_id AS b_captain,
         r.discord_thread_id, r.parent_channel_id, r.starter_message_id,
         s.scheduled_at, st.started_at, st.started_by_discord_id,
-        result.team1_score, result.team2_score, result.winner_team_id, result.approved_by_discord_id
+        result.team1_score, result.team2_score, result.winner_team_id, result.approved_by_discord_id, result.revision
       FROM tournament_matches m
       LEFT JOIN teams a ON a.id = m.team1_id AND a.tournament_id = m.tournament_id
       LEFT JOIN teams b ON b.id = m.team2_id AND b.tournament_id = m.tournament_id
@@ -76,7 +76,7 @@ export class MatchRepository {
       readyTeamIds: ready.map(item => item.team_id), refereeIds: refs.map(item => item.referee_discord_id),
       startedAt: row.started_at === null ? null : Number(row.started_at), startedBy: row.started_by_discord_id,
       result: row.winner_team_id ? { team1Score: Number(row.team1_score), team2Score: Number(row.team2_score),
-        winnerTeamId: row.winner_team_id, approvedBy: row.approved_by_discord_id } : null
+        winnerTeamId: row.winner_team_id, approvedBy: row.approved_by_discord_id, revision: Number(row.revision) } : null
     };
   }
 

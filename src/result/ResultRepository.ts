@@ -12,7 +12,13 @@ export interface ResultSubmission {
 }
 export interface CanonicalResult {
   matchId: string; tournamentId: string; submissionId: string; team1Score: number; team2Score: number;
-  winnerTeamId: string; loserTeamId: string; approvedBy: string; approvedAt: number; resolutionReason: string | null;
+  winnerTeamId: string; loserTeamId: string; approvedBy: string; approvedAt: number; resolutionReason: string | null; revision: number;
+}
+export interface CorrectionRecord {
+  id: string; tournamentId: string; matchId: string; number: number;
+  oldTeam1Score: number; oldTeam2Score: number; oldWinnerTeamId: string; oldLoserTeamId: string;
+  newTeam1Score: number; newTeam2Score: number; newWinnerTeamId: string; newLoserTeamId: string;
+  actorId: string; reason: string; correctedAt: number; versionBefore: number; versionAfter: number;
 }
 export interface TournamentOutcome { championTeamId: string; runnerUpTeamId: string; finalMatchId: string }
 
@@ -67,10 +73,10 @@ export class ResultRepository {
     return row ? { matchId: row.match_id, tournamentId: row.tournament_id,
       submissionId: row.approved_submission_id, team1Score: Number(row.team1_score), team2Score: Number(row.team2_score),
       winnerTeamId: row.winner_team_id, loserTeamId: row.loser_team_id,
-      approvedBy: row.approved_by_discord_id, approvedAt: Number(row.approved_at), resolutionReason: row.resolution_reason } : null;
+      approvedBy: row.approved_by_discord_id, approvedAt: Number(row.approved_at), resolutionReason: row.resolution_reason, revision: Number(row.revision) } : null;
   }
   allCanonical(tournamentId: string): CanonicalResult[] {
-    const rows = this.db.prepare('SELECT match_id FROM match_results WHERE tournament_id = ? ORDER BY approved_at').all(tournamentId) as any[];
+    const rows = this.db.prepare('SELECT r.match_id FROM match_results r JOIN tournament_matches m ON m.id = r.match_id WHERE r.tournament_id = ? ORDER BY m.round_number, m.match_number').all(tournamentId) as any[];
     return rows.map(row => this.canonical(row.match_id)!);
   }
   orphanApprovedCount(tournamentId: string): number {
@@ -112,6 +118,70 @@ export class ResultRepository {
       (match_id,tournament_id,approved_submission_id,team1_score,team2_score,winner_team_id,loser_team_id,approved_by_discord_id,approved_at,resolution_reason)
       VALUES (?,?,?,?,?,?,?,?,?,?)`)
       .run(match.id, match.tournamentId, submission.id, score1, score2, winner, loser, actor, now, reason);
+  }
+  correctionHistory(matchId: string): CorrectionRecord[] {
+    const rows = this.db.prepare('SELECT * FROM match_result_corrections WHERE match_id = ? ORDER BY correction_number').all(matchId) as any[];
+    return rows.map(row => ({ id: row.id, tournamentId: row.tournament_id, matchId: row.match_id,
+      number: Number(row.correction_number), oldTeam1Score: Number(row.old_team1_score),
+      oldTeam2Score: Number(row.old_team2_score), oldWinnerTeamId: row.old_winner_team_id,
+      oldLoserTeamId: row.old_loser_team_id, newTeam1Score: Number(row.new_team1_score),
+      newTeam2Score: Number(row.new_team2_score), newWinnerTeamId: row.new_winner_team_id,
+      newLoserTeamId: row.new_loser_team_id, actorId: row.corrected_by_discord_id,
+      reason: row.reason, correctedAt: Number(row.corrected_at),
+      versionBefore: Number(row.bracket_version_before), versionAfter: Number(row.bracket_version_after) }));
+  }
+  insertCorrection(old: CanonicalResult, score1: number, score2: number, winner: string, loser: string,
+    actor: string, reason: string, versionBefore: number, now: number): void {
+    this.db.prepare(`INSERT INTO match_result_corrections
+      (id,tournament_id,match_id,correction_number,old_team1_score,old_team2_score,old_winner_team_id,old_loser_team_id,
+       new_team1_score,new_team2_score,new_winner_team_id,new_loser_team_id,corrected_by_discord_id,reason,corrected_at,
+       bracket_version_before,bracket_version_after) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run(`correction_${crypto.randomUUID()}`, old.tournamentId, old.matchId, old.revision,
+        old.team1Score, old.team2Score, old.winnerTeamId, old.loserTeamId,
+        score1, score2, winner, loser, actor, reason, now, versionBefore, versionBefore + 1);
+  }
+  updateCanonical(old: CanonicalResult, score1: number, score2: number, winner: string, loser: string): void {
+    const changed = this.db.prepare(`UPDATE match_results SET team1_score = ?, team2_score = ?, winner_team_id = ?,
+      loser_team_id = ?, revision = revision + 1 WHERE match_id = ? AND revision = ?`)
+      .run(score1, score2, winner, loser, old.matchId, old.revision).changes;
+    if (changed !== 1) throw new Error('Canonical result changed concurrently.');
+  }
+  updateOutcome(tournamentId: string, finalMatchId: string, winner: string, loser: string): void {
+    const changed = this.db.prepare(`UPDATE tournament_outcomes SET champion_team_id = ?, runner_up_team_id = ?
+      WHERE tournament_id = ? AND final_match_id = ?`)
+      .run(winner, loser, tournamentId, finalMatchId).changes;
+    if (changed !== 1) throw new Error('Tournament outcome changed concurrently.');
+  }
+  updatePassive(match: MatchRecord, engine: EngineMatch, now: number): void {
+    const status = engine.team1.id && engine.team2.id ? 'READY' : 'WAITING';
+    const changed = this.db.prepare(`UPDATE tournament_matches SET team1_id = ?, team2_id = ?, status = ?, updated_at = ?
+      WHERE tournament_id = ? AND id = ? AND status IN ('WAITING','READY')`)
+      .run(engine.team1.id, engine.team2.id, status, now, match.tournamentId, match.id).changes;
+    if (changed !== 1) throw new Error('Passive match changed concurrently.');
+  }
+  correctionHistoryValid(tournamentId: string): boolean {
+    const orphan = this.db.prepare(`SELECT COUNT(*) AS n FROM match_result_corrections c
+      LEFT JOIN match_results r ON r.match_id=c.match_id AND r.tournament_id=c.tournament_id
+      WHERE c.tournament_id=? AND r.match_id IS NULL`).get(tournamentId) as any;
+    if (orphan.n) return false;
+    for (const result of this.allCanonical(tournamentId)) {
+      const history = this.correctionHistory(result.matchId);
+      if (result.revision !== history.length + 1) return false;
+      for (let i = 0; i < history.length; i++) {
+        const current = history[i];
+        if (current.number !== i + 1 || current.versionAfter !== current.versionBefore + 1 ||
+            (i > 0 && (current.oldTeam1Score !== history[i - 1].newTeam1Score ||
+              current.oldTeam2Score !== history[i - 1].newTeam2Score ||
+              current.oldWinnerTeamId !== history[i - 1].newWinnerTeamId ||
+              current.oldLoserTeamId !== history[i - 1].newLoserTeamId ||
+              current.versionBefore < history[i - 1].versionAfter))) return false;
+      }
+      if (history.length && (history.at(-1)!.newTeam1Score !== result.team1Score ||
+          history.at(-1)!.newTeam2Score !== result.team2Score ||
+          history.at(-1)!.newWinnerTeamId !== result.winnerTeamId ||
+          history.at(-1)!.newLoserTeamId !== result.loserTeamId)) return false;
+    }
+    return true;
   }
   updateWaiting(match: MatchRecord, engine: EngineMatch, now: number): void {
     this.db.prepare(`UPDATE tournament_matches SET team1_id = ?, team2_id = ?,

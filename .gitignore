@@ -9,6 +9,7 @@ coverage/
 
 # Database and persistence
 data/*.db
+data/backups/
 data/*.sqlite
 data/*.db-journal
 data/*.sqlite-journal

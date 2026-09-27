@@ -23,6 +23,7 @@ function reasonText(reason: string): string {
 
 export class ResultService {
   private readonly cardUpdates = new Map<string, Promise<void>>();
+  private readonly correctionsInFlight = new Set<string>();
   constructor(
     private readonly repo: ResultRepository,
     private readonly matches: MatchRepository,
@@ -199,6 +200,111 @@ export class ResultService {
     return result;
   }
 
+  public async correct(tournamentId: string, round: number, number: number, score1: number, score2: number,
+    reason: string, confirm: boolean, actor: string, staff: boolean): Promise<CanonicalResult> {
+    if (!staff) throw new ResultError('NOT_STAFF', 'Chỉ Ban Tổ Chức được hiệu chỉnh kết quả.');
+    if (confirm !== true) throw new ResultError('CONFIRM_REQUIRED', 'Cần xác nhận hiệu chỉnh kết quả.');
+    const text = reason.trim();
+    if (text.length < 10 || text.length > 500) throw new ResultError('INVALID_REASON', 'Lý do hiệu chỉnh phải có từ 10 đến 500 ký tự.');
+    if (!validBo3(score1, score2)) throw new ResultError('INVALID_SCORE', 'BO3 chỉ nhận 2–0, 2–1, 0–2 hoặc 1–2.');
+    if (!Number.isInteger(round) || round < 1 || !Number.isInteger(number) || number < 1)
+      throw new ResultError('INVALID_SELECTOR', 'Vòng và trận phải là số nguyên dương.');
+    const key = `${tournamentId}:${round}:${number}`;
+    if (this.correctionsInFlight.has(key)) throw new ResultError('CONFLICT', 'Trận đang được hiệu chỉnh. Hãy thử lại sau.');
+    this.correctionsInFlight.add(key);
+    try {
+      const result = this.repo.transaction(() => {
+        const match = this.matches.bySelector(tournamentId, round, number);
+        if (!match || match.status !== 'COMPLETED' || !match.team1 || !match.team2)
+          throw new ResultError('INVALID_MATCH', 'Chỉ có thể hiệu chỉnh trận đã hoàn tất có hai đội.');
+        const old = this.repo.canonical(match.id);
+        if (!old) throw new ResultError('MISSING_CANONICAL', 'Trận thiếu kết quả chính thức.');
+        if (old.team1Score === score1 && old.team2Score === score2) throw new ResultError('NO_CHANGE', 'Tỷ số mới trùng kết quả hiện tại.');
+        const saved = this.repo.bracket(tournamentId);
+        if (!saved) throw new ResultError('CORRUPT_BRACKET', 'Không có nhánh đấu đã lưu.');
+        if (!this.repo.correctionHistoryValid(tournamentId))
+          throw new ResultError('CORRUPT_HISTORY', 'Lịch sử hiệu chỉnh không nhất quán.');
+        const engine = this.engineFactory(); engine.restore(saved.state);
+        const before = engine.getBracket();
+        const target = before.matches.find(item => item.id === match.engineMatchId);
+        if (!target?.hasEnded || target.team1.id !== match.team1.id || target.team2.id !== match.team2.id ||
+            target.team1.score !== old.team1Score || target.team2.score !== old.team2Score ||
+            target.winnerId !== old.winnerTeamId || target.loserId !== old.loserTeamId)
+          throw new ResultError('ENGINE_MISMATCH', 'Engine không khớp kết quả chính thức.');
+        const outcome = this.repo.outcome(tournamentId);
+        const isFinal = before.matches.every(item => item.round <= match.round);
+        if (isFinal && (this.repo.tournamentStatus(tournamentId) !== 'completed' || outcome?.finalMatchId !== match.id))
+          throw new ResultError('ENGINE_MISMATCH', 'Chung kết và trạng thái giải không nhất quán.');
+        let reset;
+        try { reset = engine.resetResult(match.engineMatchId).bracket; }
+        catch { throw new ResultError('CORRECTION_LOCKED', 'Nhánh sau đã vận hành; không thể hiệu chỉnh trận này.'); }
+        const affected = new Set<string>();
+        for (const oldMatch of before.matches) {
+          if (oldMatch.id === target.id) continue;
+          const cleared = reset.matches.find(item => item.id === oldMatch.id);
+          if (!cleared) throw new ResultError('ENGINE_MISMATCH', 'Thiếu trận sau khi reset trong bộ nhớ.');
+          if (oldMatch.team1.id !== cleared.team1.id || oldMatch.team2.id !== cleared.team2.id ||
+              oldMatch.hasEnded !== cleared.hasEnded || oldMatch.winnerId !== cleared.winnerId ||
+              oldMatch.loserId !== cleared.loserId || oldMatch.isActive !== cleared.isActive ||
+              oldMatch.team1.score !== cleared.team1.score || oldMatch.team2.score !== cleared.team2.score)
+            affected.add(oldMatch.id);
+        }
+        const appMatches = this.matches.list(tournamentId);
+        for (const appMatch of appMatches) {
+          const original = before.matches.find(item => item.id === appMatch.engineMatchId);
+          if (!original || original.team1.id !== (appMatch.team1?.id ?? null) ||
+              original.team2.id !== (appMatch.team2?.id ?? null) ||
+              original.hasEnded !== (appMatch.status === 'COMPLETED'))
+            throw new ResultError('ENGINE_MISMATCH', 'Nhánh đấu và trận ứng dụng không khớp trước hiệu chỉnh.');
+        }
+        for (const engineId of affected) {
+          const downstream = appMatches.find(item => item.engineMatchId === engineId);
+          if (!downstream) throw new ResultError('ENGINE_MISMATCH', 'Thiếu trận ứng dụng sau khi reset.');
+          if (!['WAITING', 'READY'].includes(downstream.status) || downstream.room ||
+              downstream.scheduledAt !== null || downstream.readyTeamIds.length || downstream.refereeIds.length ||
+              downstream.startedAt !== null || downstream.result || this.repo.canonical(downstream.id) ||
+              this.repo.submissions(downstream.id).length)
+            throw new ResultError('CORRECTION_LOCKED', 'Trận sau đã có hoạt động; không thể hiệu chỉnh.');
+        }
+        const corrected = engine.reportResult(match.engineMatchId, score1, score2).bracket;
+        const ended = corrected.matches.find(item => item.id === target.id);
+        const winner = score1 > score2 ? match.team1.id : match.team2.id;
+        const loser = score1 > score2 ? match.team2.id : match.team1.id;
+        if (!ended?.hasEnded || ended.winnerId !== winner || ended.loserId !== loser ||
+            ended.team1.score !== score1 || ended.team2.score !== score2)
+          throw new ResultError('ENGINE_MISMATCH', 'Engine trả về kết quả hiệu chỉnh không nhất quán.');
+        for (const appMatch of appMatches) {
+          if (appMatch.id === match.id) continue;
+          const engineMatch = corrected.matches.find(item => item.id === appMatch.engineMatchId);
+          if (!engineMatch) throw new ResultError('ENGINE_MISMATCH', 'Thiếu trận sau hiệu chỉnh.');
+          const different = engineMatch.team1.id !== (appMatch.team1?.id ?? null) ||
+            engineMatch.team2.id !== (appMatch.team2?.id ?? null);
+          if (different) {
+            if (!affected.has(appMatch.engineMatchId)) throw new ResultError('ENGINE_MISMATCH', 'Trận không phụ thuộc bị đổi đội.');
+            this.repo.updatePassive(appMatch, engineMatch, this.now());
+          }
+        }
+        this.repo.insertCorrection(old, score1, score2, winner, loser, actor, text, saved.version, this.now());
+        this.repo.updateCanonical(old, score1, score2, winner, loser);
+        this.repo.saveBracket(tournamentId, saved.version, engine.serialize());
+        if (isFinal) this.repo.updateOutcome(tournamentId, match.id, winner, loser);
+        this.repo.audit(match, old.submissionId, actor, 'CORRECT_RESULT', String(old.revision), String(old.revision + 1), this.now());
+        return this.repo.canonical(match.id)!;
+      });
+      await this.refreshCards(tournamentId, result.matchId);
+      return result;
+    } finally { this.correctionsInFlight.delete(key); }
+  }
+
+  public history(tournamentId: string, round: number, number: number, staff: boolean) {
+    if (!staff) throw new ResultError('NOT_STAFF', 'Chỉ Ban Tổ Chức được xem lịch sử hiệu chỉnh.');
+    const match = this.matches.bySelector(tournamentId, round, number);
+    if (!match) throw new ResultError('MATCH_NOT_FOUND', 'Không tìm thấy trận.');
+    const canonical = this.repo.canonical(match.id);
+    if (!canonical) throw new ResultError('MISSING_CANONICAL', 'Trận chưa có kết quả chính thức.');
+    return { match, canonical, corrections: this.repo.correctionHistory(match.id) };
+  }
+
   public async refresh(tournamentId: string, threadId: string, actor: string, staff: boolean): Promise<void> {
     const match = this.matchInRoom(tournamentId, threadId);
     this.requireReferee(match, actor, staff);
@@ -219,7 +325,8 @@ export class ResultService {
     }
     const engine = this.engineFactory(); engine.restore(bracket.state);
     const engineBracket = engine.getBracket();
-    if (this.repo.orphanApprovedCount(tournamentId) || this.repo.missingEvidenceCount(tournamentId)) {
+    if (this.repo.orphanApprovedCount(tournamentId) || this.repo.missingEvidenceCount(tournamentId) ||
+        !this.repo.correctionHistoryValid(tournamentId)) {
       throw new ResultError('CORRUPT_RESULT', 'Báo cáo thiếu kết quả chính thức hoặc bằng chứng đã lưu.');
     }
     for (const match of matches) {

@@ -238,7 +238,7 @@ export function initializeSchema(db: DatabaseSync): void {
       team1_score INTEGER NOT NULL, team2_score INTEGER NOT NULL,
       winner_team_id TEXT NOT NULL, loser_team_id TEXT NOT NULL,
       approved_by_discord_id TEXT NOT NULL, approved_at INTEGER NOT NULL,
-      resolution_reason TEXT,
+      resolution_reason TEXT, revision INTEGER NOT NULL DEFAULT 1 CHECK(revision > 0),
       FOREIGN KEY(tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS result_audit_logs (
@@ -252,6 +252,47 @@ export function initializeSchema(db: DatabaseSync): void {
       champion_team_id TEXT NOT NULL, runner_up_team_id TEXT NOT NULL,
       final_match_id TEXT NOT NULL UNIQUE, completed_at INTEGER NOT NULL,
       completed_by_discord_id TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS match_result_corrections (
+      id TEXT PRIMARY KEY, tournament_id TEXT NOT NULL, match_id TEXT NOT NULL,
+      correction_number INTEGER NOT NULL CHECK(correction_number > 0),
+      old_team1_score INTEGER NOT NULL, old_team2_score INTEGER NOT NULL,
+      old_winner_team_id TEXT NOT NULL, old_loser_team_id TEXT NOT NULL,
+      new_team1_score INTEGER NOT NULL, new_team2_score INTEGER NOT NULL,
+      new_winner_team_id TEXT NOT NULL, new_loser_team_id TEXT NOT NULL,
+      corrected_by_discord_id TEXT NOT NULL, reason TEXT NOT NULL,
+      corrected_at INTEGER NOT NULL, bracket_version_before INTEGER NOT NULL,
+      bracket_version_after INTEGER NOT NULL,
+      UNIQUE(match_id, correction_number),
+      FOREIGN KEY(tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TRIGGER IF NOT EXISTS trg_correction_immutable_update BEFORE UPDATE ON match_result_corrections
+      BEGIN SELECT RAISE(ABORT, 'correction history is immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS trg_correction_immutable_delete BEFORE DELETE ON match_result_corrections
+      BEGIN SELECT RAISE(ABORT, 'correction history is immutable'); END;
+    CREATE TABLE IF NOT EXISTS public_result_messages (
+      match_id TEXT PRIMARY KEY, tournament_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL, discord_message_id TEXT NOT NULL UNIQUE,
+      published_revision INTEGER NOT NULL CHECK(published_revision > 0), content_hash TEXT NOT NULL,
+      published_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+      FOREIGN KEY(tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS public_champion_messages (
+      tournament_id TEXT PRIMARY KEY REFERENCES tournaments(id) ON DELETE CASCADE,
+      channel_id TEXT NOT NULL, discord_message_id TEXT NOT NULL UNIQUE,
+      published_revision INTEGER NOT NULL CHECK(published_revision > 0), content_hash TEXT NOT NULL,
+      published_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS match_streams (
+      match_id TEXT PRIMARY KEY, tournament_id TEXT NOT NULL,
+      url TEXT NOT NULL, title TEXT, set_by_discord_id TEXT NOT NULL, updated_at INTEGER NOT NULL,
+      FOREIGN KEY(tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS match_casters (
+      match_id TEXT NOT NULL, tournament_id TEXT NOT NULL,
+      caster_discord_id TEXT NOT NULL, assigned_by_discord_id TEXT NOT NULL, assigned_at INTEGER NOT NULL,
+      PRIMARY KEY(match_id, caster_discord_id),
+      FOREIGN KEY(tournament_id, match_id) REFERENCES tournament_matches(tournament_id, id) ON DELETE CASCADE
     );
 
     -- The adapter omits automatic BYE matches. Record the advancement path,
@@ -279,6 +320,12 @@ export function initializeSchema(db: DatabaseSync): void {
       )
       BEGIN SELECT RAISE(ABORT, 'invalid tournament status transition'); END;
   `);
+
+  // Phase 3A databases lack revision. ALTER TABLE is additive and preserves all approved results.
+  const resultColumns = db.prepare('PRAGMA table_info(match_results)').all() as { name: string }[];
+  if (!resultColumns.some(column => column.name === 'revision')) {
+    db.exec('ALTER TABLE match_results ADD COLUMN revision INTEGER NOT NULL DEFAULT 1 CHECK(revision > 0);');
+  }
 
   // One-time conversion of Phase 2A's placeholder SCHEDULED state. The marker
   // prevents later genuine schedules from being reset during subsequent boots.

@@ -67,6 +67,10 @@
 - [x] Human review and separate post-merge Discord E2E
 
 ### Phase 3B — Public Results / Champion Ceremony / Livestream / Final Hardening
-- [ ] Polished public results publishing and champion ceremony
-- [ ] Livestream/caster integration
-- [ ] Guarded approved-result correction policy and production hardening/deployment
+- [x] Persistent public result publishing, retry recovery, and champion ceremony
+- [x] Livestream/VOD and caster metadata with HTTPS platform allowlist
+- [x] Guarded approved-result correction, immutable history, and bracket reconciliation
+- [x] Production doctor, SQLite backup, graceful shutdown, and runbook
+- [ ] Human review and separate post-merge Phase 3B Discord E2E
+- [ ] LICENSE_REVIEW_REQUIRED and explicit production release approval
+- [ ] Production deployment (not part of Phase 3B implementation)

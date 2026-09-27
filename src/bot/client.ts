@@ -18,10 +18,18 @@ import { ResultRepository } from '../result/ResultRepository.js';
 import { ResultService } from '../result/ResultService.js';
 import { DiscordEvidenceGateway } from './DiscordEvidenceGateway.js';
 import { ResultHandler } from './handlers/ResultHandler.js';
-import { umaCommand } from './commands/umaCommand.js';
+import { umaCommand, umaCasterCommand } from './commands/umaCommand.js';
+import { StreamRepository } from '../stream/StreamRepository.js';
+import { StreamService } from '../stream/StreamService.js';
+import { PublicationRepository } from '../publication/PublicationRepository.js';
+import { PublicationService } from '../publication/PublicationService.js';
+import { DiscordPublicAnnouncementGateway } from './DiscordPublicAnnouncementGateway.js';
+import { ProductionReadinessService } from '../operations/ProductionReadinessService.js';
+import { DiscordResourceProbe } from './DiscordResourceProbe.js';
+import { OperationsHandler } from './handlers/OperationsHandler.js';
 import { getConfig } from '../config/env.js';
 
-export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: TeamRepository; matchService: MatchService; resultService: ResultService } {
+export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: TeamRepository; matchService: MatchService; resultService: ResultService; publicationService: PublicationService; streamService: StreamService } {
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -36,8 +44,15 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
   const matchService = new MatchService(matchRepo, tournamentRepo,
     new TournamentService(tournamentRepo), new DiscordMatchRoomGateway(client));
   const resultService = new ResultService(new ResultRepository(db), matchRepo, new DiscordEvidenceGateway(client));
+  const streamService = new StreamService(new StreamRepository(db), matchRepo);
+  const publicationService = new PublicationService(new PublicationRepository(db), matchRepo,
+    new ResultRepository(db), new StreamRepository(db), new DiscordPublicAnnouncementGateway(client), getConfig().RESULTS_CHANNEL_ID);
+  const readinessService = new ProductionReadinessService(db, getConfig(), tournamentRepo,
+    new TournamentService(tournamentRepo), matchService, resultService, publicationService, streamService,
+    new DiscordResourceProbe(client));
+  const operationsHandler = new OperationsHandler(publicationService, streamService, resultService, readinessService);
   const tournamentHandler = new TournamentHandler(new TournamentService(tournamentRepo), teamRepo, matchService, resultService);
-  const matchHandler = new MatchHandler(matchService);
+  const matchHandler = new MatchHandler(matchService, streamService);
   const resultHandler = new ResultHandler(resultService, matchRepo);
 
   client.on('ready', () => {
@@ -47,8 +62,11 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
   client.on('interactionCreate', async interaction => {
     try {
       if (interaction.isChatInputCommand()) {
+        if (interaction.commandName === 'uma-caster') { await operationsHandler.handle(interaction); return; }
         const subcommand = interaction.options.getSubcommand(false);
-        if (['report-result', 'result-resolve', 'result-refresh', 'results'].includes(subcommand ?? '')) {
+        if (['publish-sync','result-correct','result-history','stream-set','stream-clear','stream','doctor'].includes(subcommand ?? '')) {
+          await operationsHandler.handle(interaction);
+        } else if (['report-result', 'result-resolve', 'result-refresh', 'results'].includes(subcommand ?? '')) {
           await resultHandler.handleSlashCommand(interaction);
         } else if (['start', 'match-referee', 'rooms-create', 'match-schedule', 'matches'].includes(subcommand ?? '')) {
           await matchHandler.handleSlashCommand(interaction);
@@ -80,7 +98,7 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
     }
   });
 
-  return { client, teamRepo, matchService, resultService };
+  return { client, teamRepo, matchService, resultService, publicationService, streamService };
 }
 
 export async function deployCommands(): Promise<void> {
@@ -90,7 +108,7 @@ export async function deployCommands(): Promise<void> {
   console.log(`Deploying slash commands to Guild ${config.DISCORD_GUILD_ID}...`);
   await rest.put(
     Routes.applicationGuildCommands(config.DISCORD_CLIENT_ID, config.DISCORD_GUILD_ID),
-    { body: [umaCommand.toJSON()] }
+    { body: [umaCommand.toJSON(), umaCasterCommand.toJSON()] }
   );
   console.log('✅ Successfully registered slash commands for development guild.');
 }

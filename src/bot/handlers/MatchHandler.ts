@@ -2,9 +2,10 @@ import { ButtonInteraction, ChatInputCommandInteraction, GuildMember } from 'dis
 import { getConfig, isStaffMember } from '../../config/env.js';
 import { MatchError, MatchService } from '../../match/MatchService.js';
 import { MatchUI } from '../ui/MatchUI.js';
+import type { StreamService } from '../../stream/StreamService.js';
 
 export class MatchHandler {
-  constructor(private readonly service: MatchService) {}
+  constructor(private readonly service: MatchService, private readonly streams?: StreamService) {}
 
   public async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const sub = interaction.options.getSubcommand();
@@ -38,7 +39,9 @@ export class MatchHandler {
         const match = await this.service.schedule(tournamentId, round, number, time, interaction.user.id, staff);
         await interaction.editReply(`📅 R${round}-M${number} đã lên lịch: <t:${Math.floor(match.scheduledAt! / 1000)}:F> (<t:${Math.floor(match.scheduledAt! / 1000)}:R>).`);
       } else if (sub === 'matches') {
-        await interaction.reply({ embeds: MatchUI.publicMatchEmbeds(this.service.list(tournamentId)), allowedMentions: { parse: [] } });
+        const matches = this.service.list(tournamentId);
+        const streamed = new Set(matches.filter(match => this.streams?.forMatch(match.id).stream).map(match => match.id));
+        await interaction.reply({ embeds: MatchUI.publicMatchEmbeds(matches, streamed), allowedMentions: { parse: [] } });
       }
     } catch (error) { await this.respondError(interaction, error); }
   }
