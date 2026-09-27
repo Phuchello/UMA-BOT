@@ -3,45 +3,51 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const isTestOrCI = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
+const discordId = z.string().trim().regex(/^\d{17,20}$/, 'must be a 17–20 digit Discord ID');
+const staffRoleIds = z.string().trim().refine(
+  value => value.split(',').every(id => discordId.safeParse(id.trim()).success),
+  'must be one or more comma-separated Discord role IDs'
+);
 
-const envSchema = z.object({
-  DISCORD_TOKEN: isTestOrCI
-    ? z.string().default('mock_discord_token_ci_test')
-    : z.string().min(1, 'DISCORD_TOKEN is required'),
-  DISCORD_CLIENT_ID: isTestOrCI
-    ? z.string().default('123456789012345678')
-    : z.string().min(1, 'DISCORD_CLIENT_ID is required'),
-  DISCORD_GUILD_ID: isTestOrCI
-    ? z.string().default('1435278955941986540')
-    : z.string().min(1, 'DISCORD_GUILD_ID is required'),
-  ACTIVE_TOURNAMENT_ID: z.string().default('uma-cup-2027'),
-  TOURNAMENT_NAME: z.string().default('UMA Cup 2027'),
-  BTC_CHANNEL_ID: z.string().default('1553333896307810325'),
-  REGISTRATION_CHANNEL_ID: z.string().default('1553333598747365386'),
-  REFEREE_CHANNEL_ID: z.string().default('1553333901122871366'),
-  RESULTS_CHANNEL_ID: z.string().default('1553333608461369394'),
-  TOURNAMENT_ADMIN_ROLE_IDS: z.string().default('1435282052445638706,1435283592657244243'),
-  DATABASE_PATH: z.string().default('data/tournament.sqlite'),
-  DEFAULT_GAME: z.string().default('Liên Quân Mobile'),
-  MAX_TEAMS: z.coerce.number().default(16),
-  STARTERS_COUNT: z.coerce.number().default(5),
-  MAX_SUBSTITUTES: z.coerce.number().default(2)
-});
+function createEnvSchema(isTest: boolean) {
+  return z.object({
+    DISCORD_TOKEN: isTest
+      ? z.string().trim().min(1).default('mock_discord_token_test')
+      : z.string().trim().min(1, 'DISCORD_TOKEN is required'),
+    DISCORD_CLIENT_ID: isTest ? discordId.default('100000000000000001') : discordId,
+    DISCORD_GUILD_ID: isTest ? discordId.default('100000000000000002') : discordId,
+    ACTIVE_TOURNAMENT_ID: z.string().default('uma-cup-2027'),
+    TOURNAMENT_NAME: z.string().default('UMA Cup 2027'),
+    BTC_CHANNEL_ID: isTest ? discordId.default('100000000000000003') : discordId,
+    REGISTRATION_CHANNEL_ID: isTest ? discordId.default('100000000000000004') : discordId,
+    REFEREE_CHANNEL_ID: isTest ? discordId.default('100000000000000005') : discordId,
+    RESULTS_CHANNEL_ID: isTest ? discordId.default('100000000000000006') : discordId,
+    TOURNAMENT_ADMIN_ROLE_IDS: isTest
+      ? staffRoleIds.default('100000000000000007,100000000000000008')
+      : staffRoleIds,
+    DATABASE_PATH: z.string().default('data/tournament.sqlite'),
+    DEFAULT_GAME: z.string().default('Liên Quân Mobile'),
+    MAX_TEAMS: z.coerce.number().default(16),
+    STARTERS_COUNT: z.coerce.number().default(5),
+    MAX_SUBSTITUTES: z.coerce.number().default(2)
+  });
+}
 
-export type EnvConfig = z.infer<typeof envSchema>;
+export type EnvConfig = z.infer<ReturnType<typeof createEnvSchema>>;
 
 let parsedConfig: EnvConfig | null = null;
 
-export function getConfig(): EnvConfig {
-  if (!parsedConfig) {
-    const parsed = envSchema.safeParse(process.env);
-    if (!parsed.success) {
-      const errors = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
-      throw new Error(`Environment configuration error: ${errors}`);
-    }
-    parsedConfig = parsed.data;
+export function parseConfig(env: NodeJS.ProcessEnv): EnvConfig {
+  const parsed = createEnvSchema(env.NODE_ENV === 'test').safeParse(env);
+  if (!parsed.success) {
+    const errors = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+    throw new Error(`Environment configuration error: ${errors}`);
   }
+  return parsed.data;
+}
+
+export function getConfig(): EnvConfig {
+  if (!parsedConfig) parsedConfig = parseConfig(process.env);
   return parsedConfig;
 }
 
