@@ -1,7 +1,18 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 3A E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 3B Planning
+Phase 3B IMPLEMENTED / Awaiting Automated Review & Discord E2E
+
+## Phase 3B implementation checkpoint
+- **Branch:** `feat/phase3b-finalization` from `aa45deacb4094d71daa7d01026561d1241afe3a6`.
+- **Clean baseline:** Windows development clone at `C:\Users\lyle3\source\repos\UMA-BOT-phase3b`; Node 24.19.0, npm 11.17.0; 149/149 tests in 12 suites, typecheck/build/diff-check PASS.
+- **Public results:** `PublicationService` derives Vietnamese cards from canonical result rows and uses a Discord gateway. Staff `/uma publish-sync` creates/edits/replaces missing messages, persists identities and revisions, and compensates failed new-message DB persistence.
+- **Corrections:** Staff-only confirmation and 10–500 character reason. In-memory engine reset identifies affected downstream matches; any operational activity locks the correction. One transaction updates canonical revision, immutable history, passive participants, engine state, bracket version exactly once, and final outcome when applicable.
+- **Streams/casters:** Separate normalized metadata tables and URL allowlist. Public `/uma stream`, compact `/uma matches` marker, and optional VOD on persistent result cards. Discord's 25-option limit places caster add/remove under `/uma-caster` to preserve prior `/uma` paths.
+- **Operations:** Read-only `/uma doctor`, SQLite `VACUUM INTO` backup with reopen check, and one-time SIGINT/SIGTERM shutdown handling.
+- **Automated tests:** 149 prior + 47 Phase 3B = 196/196 tests in 13 suites; final npm ci, typecheck, build, and diff-check PASS. Real 2-team final, 3-team BYE, 4-team semifinal, locked downstream, rollback, retry, and backup cases covered.
+- **Dependency audit:** Two moderate Vitest/@vitest/mocker development-chain advisories; no automatic breaking upgrade. **LICENSE_REVIEW_REQUIRED** for `tournament-pairings` GPL-3.0-or-later.
+- **Safety:** No Phase 3B live Discord E2E, Test Guild mutation, Production Guild mutation, or production deployment. Draft PR is for human review; do not merge in this run.
 
 ## Phase 3A checkpoint
 - **Branch:** `feat/phase3a-results-advancement` (Merged into `main` via PR #10)
@@ -99,10 +110,10 @@ Phase 3A E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 3B Planning
   2. `SECOND_CAPTAIN_READY_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); readiness was confirmed via canonical domain fallback (`MatchService.confirmReady`) rather than physical Discord UI button interaction.
 
 ## Last Safe Checkpoint
-Main commit `9c9157d` has successful CI run `36306261239`; Phase 3A Discord E2E is `PASS_WITH_LIMITATIONS`.
+Main commit `aa45dea` has successful CI run `36325283466`; Phase 3A Discord E2E is `PASS_WITH_LIMITATIONS`. Phase 3B implementation is on the review branch, not deployed.
 
 ## Exact Next Action
-Plan and implement Phase 3B (public results publishing, champion ceremony, livestream/caster integration, guarded correction policy, production deployment). Do not start Phase 3B without explicit approval.
+Review the Phase 3B Draft PR and automated CI. After merge, run a separate authorized Phase 3B Discord E2E, resolve the license gate, and obtain explicit production release approval.
 
 ## Branch
-`docs/phase3a-e2e-retest`
+`feat/phase3b-finalization`

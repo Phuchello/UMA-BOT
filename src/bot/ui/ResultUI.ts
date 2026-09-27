@@ -23,6 +23,8 @@ export class ResultUI {
     if (submission.status === 'APPROVED' && match.result) {
       const winner = match.result.winnerTeamId === match.team1?.id ? match.team1.name : match.team2?.name ?? '?';
       embed.addFields({ name: 'Đội thắng', value: safe(winner) }, { name: 'Duyệt bởi', value: `<@${match.result.approvedBy}>` });
+      if (match.result.revision > 1 && (score1 !== submission.team1Score || score2 !== submission.team2Score))
+        embed.addFields({ name: 'Hiệu chỉnh', value: `BTC đã cập nhật kết quả chính thức • Revision ${match.result.revision}` });
     }
     return embed;
   }

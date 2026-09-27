@@ -5,6 +5,7 @@ import { TournamentRepository } from './tournament/TournamentRepository.js';
 import { TournamentService } from './tournament/TournamentService.js';
 import { createBotClient, deployCommands } from './bot/client.js';
 import { pathToFileURL } from 'node:url';
+import { installGracefulShutdown } from './operations/shutdown.js';
 
 async function bootstrap() {
   console.log('🚀 Initializing UMA Tournament Bot...');
@@ -36,17 +37,21 @@ async function bootstrap() {
   if (restored) console.log(`🏆 Restored ${restored.matches.length} bracket matches without redraw.`);
 
   // 4. Create Bot Client
-  const { client, matchService, resultService } = createBotClient(db);
-  matchService.validatePersistedState(tournament.id);
-  resultService.validatePersistedState(tournament.id);
+  const { client, matchService, resultService, publicationService, streamService } = createBotClient(db);
+  const shutdown = installGracefulShutdown(client, db);
+  try {
+    matchService.validatePersistedState(tournament.id);
+    resultService.validatePersistedState(tournament.id);
+    publicationService.validatePersistedState(tournament.id);
+    streamService.validatePersistedState(tournament.id);
 
-  // 5. Register Commands if run with --deploy flag
-  if (process.argv.includes('--deploy')) {
-    await deployCommands();
+    // Only an explicit --deploy registers commands; startup never publishes.
+    if (process.argv.includes('--deploy')) await deployCommands();
+    await client.login(config.DISCORD_TOKEN);
+  } catch (error) {
+    await shutdown.stop();
+    throw error;
   }
-
-  // 6. Connect to Discord
-  await client.login(config.DISCORD_TOKEN);
 }
 
 export function isDirectExecution(moduleUrl: string, argvEntry?: string): boolean {

@@ -220,7 +220,12 @@ For UMA Club's scale (10–15 teams, one bot instance per server), single-proces
 
 ---
 
-## 7. Future Phase Roadmap (Deferred)
+## 7. Phase 3B publication, correction, and operations
 
-- **Phase 2:** Check-in management, dynamic match thread spawning, live bracket Discord embed updates.
-- **Phase 3:** Match result reporting, screenshot evidence attachment verification, referee dispute handling.
+`ResultService` remains authoritative for approved scores and engine mutation. A staff correction runs inside `BEGIN IMMEDIATE`, restores the stored engine, verifies its target against `match_results`, calls `resetResult` only in memory, and identifies affected downstream matches from engine state changes. Any referee, room, schedule, readiness, start, submission, or result in those matches causes `CORRECTION_LOCKED`. A safe correction writes immutable `match_result_corrections`, increments canonical `revision` and bracket `version` once, reconciles passive downstream participants, and updates the champion/runner-up if correcting the final. Private evidence and submissions remain intact.
+
+`PublicationService` is a derived-view boundary. `/uma publish-sync` reads canonical results, builds public-safe cards, and uses `PublicAnnouncementGateway` for Discord effects. It persists message identity and published revision only after successful send/edit. New-message persistence failure attempts message deletion; failed edit leaves the revision stale; a missing Discord message is replaced once. One `public_result_messages` row per match and one `public_champion_messages` row per tournament keep retries idempotent. A content hash also refreshes VOD links without changing canonical revision. No publishing runs on startup or inside a result transaction.
+
+`StreamService` owns `match_streams` and `match_casters`. It stores only validated public HTTPS links and caster IDs. It never handles broadcaster credentials, stream keys, OBS, or streaming APIs. Read-only public views suppress mentions.
+
+`ProductionReadinessService` checks restored tournament/match/result state, correction/publication/stream consistency, `PRAGMA quick_check`, configured guild/channel/role identities, and channel permissions. Its Discord resource probe is injected and fakeable. SQLite backups use `VACUUM INTO` and reopen validation; SIGINT/SIGTERM cleanup destroys the client and closes the database once. v1 remains exactly one bot process and one SQLite file. Production release requires separate Discord E2E, human approval, and `LICENSE_REVIEW_REQUIRED` resolution for GPL-3.0-or-later `tournament-pairings`.

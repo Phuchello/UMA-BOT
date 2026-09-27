@@ -49,7 +49,7 @@ export class MatchUI {
     )];
   }
 
-  public static publicMatchEmbeds(matches: MatchRecord[]): EmbedBuilder[] {
+  public static publicMatchEmbeds(matches: MatchRecord[], streamed = new Set<string>()): EmbedBuilder[] {
     if (matches.length === 0) return [new EmbedBuilder().setTitle('⚔️ UMA CUP — TRẬN ĐẤU')
       .setDescription('Chưa có nhánh đấu.')];
     const rounds = [...new Set(matches.map(match => match.round))].sort((a, b) => a - b);
@@ -59,7 +59,8 @@ export class MatchUI {
         const right = match.team2 ? safe(match.team2.name) : 'Chờ xác định';
         const time = match.scheduledAt === null ? '' : ` • <t:${Math.floor(match.scheduledAt / 1000)}:F>`;
         const score = match.result ? ` ${match.result.team1Score}–${match.result.team2Score}` : '';
-        return `**${label(match)}** — ${left}${score} ${match.result ? '' : 'vs '}${right}\n${stateLabel[match.status]}${time}`;
+        const stream = streamed.has(match.id) ? ' • 📺 Trực tiếp/VOD' : '';
+        return `**${label(match)}** — ${left}${score} ${match.result ? '' : 'vs '}${right}\n${stateLabel[match.status]}${time}${stream}`;
       });
       return new EmbedBuilder().setColor(0x3B82F6).setTitle(`⚔️ UMA CUP — Vòng ${round}`)
         .setDescription(lines.join('\n') || 'Chưa có trận.');
