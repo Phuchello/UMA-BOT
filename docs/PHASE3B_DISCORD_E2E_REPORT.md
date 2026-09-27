@@ -33,7 +33,7 @@
 - **Captain B:** `1553604832516898826` (The UMA Smoke Test Bot app user, participating as opponent captain).
 
 ### Synthetic PNG Evidence Artifact
-A dedicated synthetic test screenshot was generated via `System.Drawing`, binary verified against PNG magic bytes (`89 50 4e 47 0d 0a 1a 0a`), and uploaded via Discord slash command attachment:
+A dedicated synthetic PNG test artifact was generated locally using Node.js (`fs` + `zlib`) with manually constructed PNG chunks, then verified against PNG magic bytes (`89 50 4e 47 0d 0a 1a 0a`) before Discord upload:
 - `data/e2e-phase3b-result.png` (510 bytes, RGBA PNG)
 
 ---
@@ -77,7 +77,7 @@ A dedicated synthetic test screenshot was generated via `System.Drawing`, binary
 | **15** | Recovery | Deleted message single replacement | Manually deleted Result message `1553795350182109265` via REST API. Ran `/uma publish-sync` $\to$ `created = 1, unchanged = 1, updated = 0, failed = 0`. New Result message ID `1553797319458160681` created; Champion message ID untouched (`1553795351943581717`). Subsequent `/uma publish-sync` $\to$ `created = 0, updated = 0, unchanged = 2, failed = 0`. | **PASS** |
 | **16** | VOD Refresh | Stream URL update & sync | Staff ran `/uma stream-set url:https://youtu.be/dQw4w9WgXcQ?t=10 title:"UMA Phase 3B E2E VOD"`. Ran `/uma publish-sync` $\to$ `created = 0, updated = 1, unchanged = 1, failed = 0`. Content hash updated, canonical revision and bracket version untouched. | **PASS** |
 | **17** | Clear | Stream clear & sync | Staff ran `/uma stream-clear round:1 match:1` $\to$ `Đã xóa liên kết livestream/VOD; caster vẫn được giữ.` Ran `/uma stream` $\to$ `Livestream / VOD: Chưa có`, `Caster: @𝑷𝒉𝒖𝒄 𝑽𝒐 💙`. Ran `/uma publish-sync` $\to$ `created = 0, updated = 1, unchanged = 1, failed = 0` (result card edited in-place to remove VOD link). | **PASS** |
-| **18** | Doctor | Operational readiness check | Staff ran `/uma doctor` $\to$ All 15 system, DB, Discord, and permission checks passed (`PASS`). Exactly 1 expected warning (`WARN Administrator: Bot có Administrator; nên dùng quyền tối thiểu.`). | **PASS** |
+| **18** | Doctor | Operational readiness check | Staff ran `/uma doctor` → 16 readiness entries returned: 15 PASS (system, SQLite `quick_check`, bracket restore, match status, results, publication, streams/casters, guild, 5 channels, 2 staff roles) and 1 expected WARN (`BOT_HAS_ADMINISTRATOR_IN_TEST_GUILD`). | **PASS** |
 | **19** | Restart | Cold process restart | Captured pre-restart DB snapshot (20 tables). Stopped daemon. Cold restarted `node dist/index.js` $\to$ logged `Restored 1 bracket matches without redraw.` Verified 100% exact equality across all 20 tables (0 diffs). Ran `/uma doctor` $\to$ all PASS + 1 expected WARN. | **PASS** |
 | **20** | Post-Restart | Post-restart publication sync | Ran `/uma publish-sync` $\to$ `created = 0, updated = 0, unchanged = 2, failed = 0`. Zero duplicates, zero state churn. | **PASS** |
 | **21** | Backup | SQLite snapshot & overwrite refusal | Ran `node dist/operations/backup.js data/backups/phase3b-e2e-backup.sqlite` $\to$ backup created. Verified `PRAGMA quick_check = ok` and 27 tables present. Tested overwrite refusal: re-running with same destination threw `Backup destination already exists.` with exit code 1. | **PASS** |
@@ -153,7 +153,7 @@ Exact state equality was captured across all 20 active relational tables immedia
 
 ## 7. Conclusion
 
-Phase 3B Discord E2E validation successfully completed all 23 verification stages across public result synchronization, champion ceremony, livestream/VOD management, caster assignment, guarded result correction, recovery from deleted messages, process restart persistence, operational readiness checking, and SQLite backup operations.
+Phase 3B Discord E2E validation successfully completed all 24 verification stages across public result synchronization, champion ceremony, livestream/VOD management, caster assignment, guarded result correction, recovery from deleted messages, process restart persistence, operational readiness checking, and SQLite backup operations.
 
 - Production Guild `1435278955941986540` was **100% untouched**.
 - Zero source code modifications in `src/*` or `tests/*` were made during validation.
