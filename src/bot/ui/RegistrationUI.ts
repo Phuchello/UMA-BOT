@@ -13,7 +13,7 @@ export class RegistrationUI {
   /**
    * Main registration portal panel for #đăng-ký-thi-đấu
    */
-  public static createRegistrationPanelEmbed(approvedCount: number, maxTeams: number = 15): EmbedBuilder {
+  public static createRegistrationPanelEmbed(approvedCount: number, maxTeams: number = 16): EmbedBuilder {
     return new EmbedBuilder()
       .setColor(0x00A8FF)
       .setTitle('🏆 UMA CUP — ĐĂNG KÝ THI ĐẤU')
@@ -119,6 +119,70 @@ export class RegistrationUI {
   }
 
   /**
+   * Discord Modal for Editing / Correcting an Existing Team Registration
+   */
+  public static createEditRegistrationModal(team: TeamEntity): ModalBuilder {
+    const modal = new ModalBuilder()
+      .setCustomId(`modal_edit_team_${team.id}`)
+      .setTitle(`Sửa Đơn — ${team.name}`);
+
+    const starters = (team.players || []).filter(p => !p.isSubstitute);
+    const substitutes = (team.players || []).filter(p => p.isSubstitute);
+
+    const startersValue = starters.map(p => `${p.ingameName} | ${p.gameUid}`).join('\n');
+    const subsValue = substitutes.map(p => `${p.ingameName} | ${p.gameUid}`).join('\n');
+
+    const nameInput = new TextInputBuilder()
+      .setCustomId('txt_team_name')
+      .setLabel('1. Tên đội thi đấu')
+      .setStyle(TextInputStyle.Short)
+      .setValue(team.name)
+      .setMinLength(3)
+      .setMaxLength(32)
+      .setRequired(true);
+
+    const abbrInput = new TextInputBuilder()
+      .setCustomId('txt_team_abbr')
+      .setLabel('2. Tên viết tắt (TAG đội)')
+      .setStyle(TextInputStyle.Short)
+      .setValue(team.abbreviation)
+      .setMinLength(2)
+      .setMaxLength(5)
+      .setRequired(true);
+
+    const contactInput = new TextInputBuilder()
+      .setCustomId('txt_captain_contact')
+      .setLabel('3. SĐT / Zalo Đội trưởng')
+      .setStyle(TextInputStyle.Short)
+      .setValue(team.captainContact)
+      .setMinLength(6)
+      .setMaxLength(30)
+      .setRequired(true);
+
+    const startersInput = new TextInputBuilder()
+      .setCustomId('txt_starters')
+      .setLabel('4. 5 Tuyển thủ chính (Tên | UID)')
+      .setStyle(TextInputStyle.Paragraph)
+      .setValue(startersValue)
+      .setRequired(true);
+
+    const subsInput = new TextInputBuilder()
+      .setCustomId('txt_subs')
+      .setLabel('5. Dự bị (Tùy chọn, tối đa 2 dòng: Tên | UID)')
+      .setStyle(TextInputStyle.Paragraph)
+      .setValue(subsValue)
+      .setRequired(false);
+
+    return modal.addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(nameInput),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(abbrInput),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(contactInput),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(startersInput),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(subsInput)
+    );
+  }
+
+  /**
    * BTC Review Card in #ban-tổ-chức
    */
   public static createBtcReviewEmbed(team: TeamEntity): EmbedBuilder {
@@ -134,8 +198,11 @@ export class RegistrationUI {
     } else if (team.status === 'REJECTED') {
       statusHeader = '🔴 ĐƠN ĐÃ TỪ CHỐI';
       color = 0xEF4444; // Red
-    } else if (team.status === 'DRAFT') {
+    } else if (team.status === 'NEEDS_CORRECTION' || team.status === 'DRAFT') {
       statusHeader = '✏️ ĐANG CHỜ ĐỘI CHỈNH SỬA';
+      color = 0xF59E0B; // Amber
+    } else if (team.status === 'WITHDRAWN') {
+      statusHeader = '⚪ ĐƠN ĐÃ RÚT LUI';
       color = 0x6B7280; // Gray
     }
 
@@ -161,7 +228,7 @@ export class RegistrationUI {
       .setTimestamp(team.createdAt);
 
     if (team.rejectionReason) {
-      embed.addFields({ name: '⚠️ Lý do từ chối / chỉnh sửa', value: team.rejectionReason, inline: false });
+      embed.addFields({ name: '⚠️ Lý do từ chối / yêu cầu chỉnh sửa', value: team.rejectionReason, inline: false });
     }
 
     return embed;
@@ -213,7 +280,7 @@ export class RegistrationUI {
     const embed = new EmbedBuilder()
       .setColor(0x00A8FF)
       .setTitle('👥 DANH SÁCH ĐỘI TUYỂN — UMA CUP')
-      .setDescription(`Tổng hợp các đội tuyển đăng ký tham dự giải đấu Liên Quân Mobile.`)
+      .setDescription('Tổng hợp các đội tuyển đăng ký tham dự giải đấu Liên Quân Mobile.')
       .setTimestamp();
 
     if (approvedTeams.length === 0) {
@@ -235,22 +302,92 @@ export class RegistrationUI {
     return embed;
   }
 
+  public static createMyTeamEmbed(team: TeamEntity): EmbedBuilder {
+    const starters = (team.players || []).filter(p => !p.isSubstitute);
+    const substitutes = (team.players || []).filter(p => p.isSubstitute);
+
+    let statusHeader = '🟡 ĐANG CHỜ DUYỆT';
+    let color = 0xF59E0B;
+
+    if (team.status === 'APPROVED') {
+      statusHeader = '🟢 ĐÃ ĐƯỢC DUYỆT';
+      color = 0x10B981;
+    } else if (team.status === 'REJECTED') {
+      statusHeader = '🔴 ĐÃ BỊ TỪ CHỐI';
+      color = 0xEF4444;
+    } else if (team.status === 'NEEDS_CORRECTION') {
+      statusHeader = '✏️ YÊU CẦU CHỈNH SỬA';
+      color = 0xF59E0B;
+    } else if (team.status === 'WITHDRAWN') {
+      statusHeader = '⚪ ĐÃ RÚT LUI';
+      color = 0x6B7280;
+    }
+
+    const startersText = starters
+      .map((p, idx) => `\`${idx + 1}.\` **${p.ingameName}** — UID: \`${p.gameUid}\``)
+      .join('\n');
+
+    const subsText = substitutes.length > 0
+      ? substitutes.map((p, idx) => `\`DB${idx + 1}.\` **${p.ingameName}** — UID: \`${p.gameUid}\``).join('\n')
+      : '*Không có dự bị*';
+
+    const embed = new EmbedBuilder()
+      .setColor(color)
+      .setTitle(`ĐỘI CỦA BẠN: ${team.name} [${team.abbreviation}]`)
+      .addFields(
+        { name: '📊 Trạng thái', value: `**${statusHeader}**`, inline: true },
+        { name: '📞 SĐT Đội trưởng', value: `\`${team.captainContact}\``, inline: true },
+        { name: `👥 Đội hình chính (${starters.length}/5)`, value: startersText || '*Trống*', inline: false },
+        { name: `🔄 Dự bị (${substitutes.length})`, value: subsText, inline: false }
+      )
+      .setFooter({ text: `Mã đội: ${team.id}` })
+      .setTimestamp(team.updatedAt);
+
+    if (team.status === 'NEEDS_CORRECTION' && team.rejectionReason) {
+      embed.addFields({
+        name: '⚠️ Yêu cầu từ Ban Tổ Chức',
+        value: `**${team.rejectionReason}**\n\n👉 *Vui lòng bấm nút "Chỉnh sửa đơn" bên dưới để sửa đổi và gửi lại.*`,
+        inline: false
+      });
+    }
+
+    return embed;
+  }
+
+  public static createMyTeamButtons(team: TeamEntity): ActionRowBuilder<ButtonBuilder> | null {
+    if (team.status === 'NEEDS_CORRECTION') {
+      return new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`btn_edit_team_${team.id}`)
+          .setLabel('✏️ Chỉnh sửa đơn')
+          .setStyle(ButtonStyle.Primary)
+      );
+    }
+    return null;
+  }
+
+  /**
+   * Accurate User Guide describing ONLY verified Phase 1 functionality
+   */
   public static createGuideEmbed(): EmbedBuilder {
     return new EmbedBuilder()
       .setColor(0x3B82F6)
-      .setTitle('📘 HƯỚNG DẪN ĐĂNG KÝ VÀ THI ĐẤU — UMA CUP')
+      .setTitle('📘 HƯỚNG DẪN ĐĂNG KÝ THI ĐẤU — UMA CUP')
       .setDescription(
-        '**1. QUY TRÌNH THAM GIA GIẢI:**\n' +
-        '1️⃣ **Đăng ký:** Đội trưởng bấm `[📝 Đăng ký đội]` và điền đầy đủ 5 UID chính thức.\n' +
-        '2️⃣ **BTC Duyệt:** Ban tổ chức kiểm tra tính hợp lệ của UID và rank ingame.\n' +
-        '3️⃣ **Điểm danh:** Trước giờ thi đấu 30 phút, toàn bộ các đội vào kênh điểm danh xác nhận.\n' +
-        '4️⃣ **Nhận phòng đấu:** Hệ thống tự động tạo phòng trao đổi riêng giữa 2 đội.\n' +
-        '5️⃣ **Thi đấu & Nộp kết quả:** Sau khi kết thúc, đội trưởng gửi ảnh chụp KDA để trọng tài kiểm tra.\n\n' +
-        '**2. QUY ĐỊNH ĐỘI HÌNH:**\n' +
-        '• Đúng **5 tuyển thủ chính thức**.\n' +
-        '• Tối đa **2 tuyển thủ dự bị**.\n' +
+        '**1. QUY TRÌNH ĐĂNG KÝ VÀ DUYỆT ĐƠN:**\n' +
+        '1️⃣ **Đăng ký:** Đội trưởng bấm `[📝 Đăng ký đội]` và nhập đúng 5 dòng tuyển thủ chính thức (`Tên | UID`).\n' +
+        '2️⃣ **BTC Kiểm tra:** Ban tổ chức đối soát thông tin tuyển thủ và UID thi đấu.\n' +
+        '3️⃣ **Kết quả duyệt:**\n' +
+        '   • `✅ Phê duyệt`: Đội được chính thức ghi nhận vào danh sách thi đấu.\n' +
+        '   • `✏️ Yêu cầu sửa`: Đội trưởng nhận thông báo lý do, dùng lệnh `/uma my-team` để sửa lại thông tin.\n' +
+        '   • `❌ Từ chối`: Đơn vi phạm điều lệ sẽ bị từ chối với lý do rõ ràng.\n' +
+        '4️⃣ **Theo dõi:** Dùng lệnh `/uma teams` hoặc nút `[👥 Danh sách đội]` để xem các đội đã được duyệt.\n\n' +
+        '**2. QUY ĐỊNH ĐỘI HÌNH BẮT BUỘC:**\n' +
+        '• Bắt buộc **đúng 5 tuyển thủ chính thức**.\n' +
+        '• Tối đa **2 tuyển thủ dự bị** (tùy chọn).\n' +
         '• Mỗi tuyển thủ (Game UID) chỉ được đăng ký cho duy nhất 1 đội trong suốt giải đấu.\n' +
-        '• Tuyệt đối không gian lận, đánh thuê hoặc tráo đổi nick không thông báo.'
+        '• Mỗi đội trưởng chỉ được quản lý 1 đội đang hoạt động.\n\n' +
+        '*Lưu ý: Các tính năng điểm danh trước trận, bốc thăm nhánh đấu và tạo phòng riêng thi đấu sẽ được bổ sung ở giai đoạn tiếp theo (Phase 2).*'
       )
       .setFooter({ text: 'UMA GAMING ARENA • Tôn vinh tinh thần đồng đội' });
   }

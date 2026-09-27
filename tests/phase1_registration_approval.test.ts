@@ -335,10 +335,10 @@ describe('Phase 1: Team Registration & BTC Approval Workflow', () => {
       expect(logs[0].reason).toBe('Không đủ điều kiện rank');
     });
 
-    it('requests correction and changes status to DRAFT', () => {
+    it('requests correction and changes status to NEEDS_CORRECTION', () => {
       const correction = repo.requestCorrection(teamId, 'staff_admin_2', 'UID số 3 sai chính tả');
       expect(correction.success).toBe(true);
-      expect(correction.team?.status).toBe('DRAFT');
+      expect(correction.team?.status).toBe('NEEDS_CORRECTION');
       expect(correction.team?.rejectionReason).toBe('UID số 3 sai chính tả');
     });
 

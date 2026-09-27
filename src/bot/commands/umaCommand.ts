@@ -15,6 +15,11 @@ export const umaCommand = new SlashCommandBuilder()
   )
   .addSubcommand(sub =>
     sub
+      .setName('my-team')
+      .setDescription('Xem thông tin và chỉnh sửa đơn đăng ký đội của bạn')
+  )
+  .addSubcommand(sub =>
+    sub
       .setName('status')
       .setDescription('Xem thống kê và tiến độ giải đấu hiện tại')
   );
