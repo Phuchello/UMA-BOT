@@ -1,19 +1,20 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 3A IMPLEMENTED / Awaiting Automated Review & Discord E2E
+Phase 3A E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 3B Planning
 
 ## Phase 3A checkpoint
-- **Branch:** `feat/phase3a-results-advancement`
+- **Branch:** `feat/phase3a-results-advancement` (Merged into `main` via PR #10)
 - **Base:** `74820a3a691aca3184bfe671b91c9bd5475faf3b` (116/116 tests, 11 suites; main CI `36303976002` success)
+- **Main Commit Tested:** `9c9157d26a9fa9a82fdc1a31ee2240adf01d3036` (CI Run `36306261239`: `success`)
 - **Result states:** `PENDING → CONFIRMED → APPROVED`, `PENDING → DISPUTED → APPROVED`, or open → `REJECTED`; match `LIVE → COMPLETED`; tournament `in_progress → completed`.
 - **Evidence:** Discord attachment images are reuploaded into the private match room; archived message and attachment metadata survive restart. Source URLs are not persisted.
 - **BO3:** Only 2–0, 2–1, 0–2 and 1–2 are accepted, mapped from captain-relative input to engine team order.
 - **Authority and engine:** Only assigned referee/staff approval restores the application-owned engine, reports the result and atomically persists canonical result, engine state and one bracket-version increment.
 - **Progression:** Real three-team BYE and four-team semifinal tests preserve downstream application/engine match IDs and advance winners into `WAITING → READY`.
 - **Champion:** Final engine completion persists the champion, runner-up and final match in `tournament_outcomes` and closes the tournament.
-- **Automated tests:** 149/149 across 12 suites locally (116 previous + 33 Phase 3A); typecheck and build pass. Draft PR CI pending.
-- **Discord validation:** No Phase 3A live Discord connection yet. Production guild remains untouched.
+- **Automated tests:** 149/149 across 12 suites locally (116 previous + 33 Phase 3A); typecheck and build pass.
+- **Discord validation:** Completed on dedicated Test Guild (`1435984347814432801`) with verdict `PASS_WITH_LIMITATIONS` (Report: `docs/PHASE3A_DISCORD_E2E_REPORT.md`). Production guild remains untouched.
 
 ## Phase 2B checkpoint
 - **Branch:** `feat/phase2b-match-lifecycle` (Merged into `main` via PR #8)
@@ -41,7 +42,7 @@ Phase 3A IMPLEMENTED / Awaiting Automated Review & Discord E2E
 - **Automated tests:** 95/95 tests across 10 suites (Typecheck PASS, Build PASS, CI PASS).
 - **Discord validation:** Completed on dedicated Test Guild (`1435984347814432801`) with verdict `PASS_WITH_LIMITATIONS`. Production UMA Discord remains untouched.
 
-## PR #1–#9
+## PR #1–#10
 - PR #1 MERGED into `main` with merge commit `30a21aa`.
 - PR #2 MERGED into `main` with merge commit `2fe7c3c` (explicit Discord resource IDs).
 - PR #3 MERGED into `main` with merge commit `2a81dc6` (historical smoke-test findings).
@@ -51,6 +52,21 @@ Phase 3A IMPLEMENTED / Awaiting Automated Review & Discord E2E
 - PR #7 MERGED into `main` with merge commit `4abc080` (Phase 2A Discord E2E report).
 - PR #8 MERGED into `main` with merge commit `fadf133` (Phase 2B match rooms and lifecycle).
 - PR #9 MERGED into `main` with merge commit `74820a3` (Phase 2B Discord E2E report).
+- PR #10 MERGED into `main` with merge commit `9c9157d` (Phase 3A results, evidence, and advancement).
+
+## Discord E2E Validation (Phase 3A)
+- **Status:** PASS_WITH_LIMITATIONS
+- **Report:** `docs/PHASE3A_DISCORD_E2E_REPORT.md`
+- **Main Commit Tested:** `9c9157d26a9fa9a82fdc1a31ee2240adf01d3036` (CI Run `36306261239`: `success`)
+- **Automated Baseline:** 149 / 149 tests passing across 12 suites (Typecheck PASS, Build PASS)
+- **Verified Lifecycle Stages:**
+  - Scenario A: Normal Result Approval Lifecycle (LIVE match → `/uma report-result` with PNG evidence → evidence archived in thread with image + 4 action buttons → duplicate submission rejected → self-confirm rejected → opponent confirmation → card updated to awaiting referee → referee approval → submission APPROVED → canonical `match_results` created → match COMPLETED → tournament completed & champion recorded → bracket version 1 → 2 with engine hash mutation → evidence buttons removed with image preserved → starter card updated to completed → public views verified with zero data leaks → post-approval reporting rejected → restart exact persistence) — PASS
+  - Scenario B: Dispute / Reject / Resubmit / Resolve Lifecycle (LIVE match → first report B1 with PNG evidence → opponent dispute with reason → card updated to disputed with approve button disabled → referee rejection via modal with reason → B1 REJECTED & buttons removed → match remains LIVE → captain resubmission B2 with new PNG evidence → second dispute B2 → blocked approval on disputed result → referee resolution via `/uma result-resolve` with reason → B2 APPROVED → canonical `match_results` created → match COMPLETED → tournament completed & champion recorded → bracket version 1 → 2 with engine hash mutation → historical audit integrity preserved → restart exact persistence) — PASS
+  - Public Views & Production Isolation: Public commands safe, zero private thread/submission details leaked; UMA Production Discord (`1435278955941986540`) strictly untouched — PASS
+- **Limitations:**
+  1. `AUTHORIZATION_SEPARATION_NOT_MANUALLY_VALIDATED`: Single Discord test account (`𝑷𝒉𝒖𝒄 𝑽𝒐 💙`, Server Owner / Administrator) simultaneously acted as Captain A, Staff administrator, and assigned Referee. Automated authorization separation is comprehensively verified in test suites.
+  2. `SECOND_CAPTAIN_RESULT_INTERACTION_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); opponent confirmations and disputes were executed via canonical domain fallback (`ResultService.confirm` and `ResultService.dispute`) rather than physical Discord UI button clicks.
+  3. `MULTI_ROUND_ADVANCEMENT_NOT_LIVE_DISCORD_VALIDATED`: The two Discord E2E tournaments tested single-match tournaments (final match completing tournament & declaring champion). Multi-round bracket advancement (e.g. 3-team BYE, 4-team semifinals, 15-team bracket) is verified comprehensively in automated test suites (`tests/phase3a_results.test.ts`).
 
 ## Discord E2E Validation (Phase 2B)
 - **Status:** PASS_WITH_LIMITATIONS
@@ -83,10 +99,10 @@ Phase 3A IMPLEMENTED / Awaiting Automated Review & Discord E2E
   2. `SECOND_CAPTAIN_READY_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); readiness was confirmed via canonical domain fallback (`MatchService.confirmReady`) rather than physical Discord UI button interaction.
 
 ## Last Safe Checkpoint
-Main commit `74820a3` has successful CI run `36303976002`; Phase 2B Discord E2E is `PASS_WITH_LIMITATIONS`.
+Main commit `9c9157d` has successful CI run `36306261239`; Phase 3A Discord E2E is `PASS_WITH_LIMITATIONS`.
 
 ## Exact Next Action
-Review the Phase 3A Draft PR and CI. After merge, run a separate Phase 3A Discord E2E. Do not start Phase 3B.
+Plan and implement Phase 3B (public results publishing, champion ceremony, livestream/caster integration, guarded correction policy, production deployment). Do not start Phase 3B without explicit approval.
 
 ## Branch
-`feat/phase3a-results-advancement`
+`docs/phase3a-e2e-retest`

@@ -64,7 +64,7 @@
 - [x] Canonical engine result, stable downstream advancement and bracket versioning
 - [x] Match COMPLETED, tournament completed and champion persistence
 - [x] Restart validation and recovery command for Discord card refresh
-- [ ] Human review and separate post-merge Discord E2E
+- [x] Human review and separate post-merge Discord E2E
 
 ### Phase 3B — Public Results / Champion Ceremony / Livestream / Final Hardening
 - [ ] Polished public results publishing and champion ceremony
