@@ -65,7 +65,7 @@ Phase 3A E2E VALIDATED WITH LIMITATIONS / Awaiting Phase 3B Planning
   - Public Views & Production Isolation: Public commands safe, zero private thread/submission details leaked; UMA Production Discord (`1435278955941986540`) strictly untouched — PASS
 - **Limitations:**
   1. `AUTHORIZATION_SEPARATION_NOT_MANUALLY_VALIDATED`: Single Discord test account (`𝑷𝒉𝒖𝒄 𝑽𝒐 💙`, Server Owner / Administrator) simultaneously acted as Captain A, Staff administrator, and assigned Referee. Automated authorization separation is comprehensively verified in test suites.
-  2. `SECOND_CAPTAIN_RESULT_INTERACTION_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); opponent confirmations and disputes were executed via canonical domain fallback (`ResultService.confirmSubmission` and `ResultService.disputeSubmission`) rather than physical Discord UI button clicks.
+  2. `SECOND_CAPTAIN_RESULT_INTERACTION_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); opponent confirmations and disputes were executed via canonical domain fallback (`ResultService.confirm` and `ResultService.dispute`) rather than physical Discord UI button clicks.
   3. `MULTI_ROUND_ADVANCEMENT_NOT_LIVE_DISCORD_VALIDATED`: The two Discord E2E tournaments tested single-match tournaments (final match completing tournament & declaring champion). Multi-round bracket advancement (e.g. 3-team BYE, 4-team semifinals, 15-team bracket) is verified comprehensively in automated test suites (`tests/phase3a_results.test.ts`).
 
 ## Discord E2E Validation (Phase 2B)
