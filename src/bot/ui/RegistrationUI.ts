@@ -12,9 +12,6 @@ import type { TeamEntity } from '../../registration/TeamRepository.js';
 export class RegistrationUI {
   /**
    * Main registration portal panel for #đăng-ký-thi-đấu
-   */
-  /**
-   * Main registration portal panel for #đăng-ký-thi-đấu
    * Shows full capacity breakdown: active (PENDING+APPROVED+NEEDS_CORRECTION),
    * approved-only, pending/correction, and remaining slots.
    */
@@ -22,7 +19,7 @@ export class RegistrationUI {
     activeCount: number,
     approvedCount: number,
     pendingOrCorrectionCount: number,
-    maxTeams: number = 16
+    maxTeams: number
   ): EmbedBuilder {
     const remaining = Math.max(0, maxTeams - activeCount);
     return new EmbedBuilder()

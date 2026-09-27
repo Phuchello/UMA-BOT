@@ -57,6 +57,7 @@ export interface ResubmitTeamInput {
 export class TeamRepository {
   constructor(private db: DatabaseSync) {}
 
+  /** Create a tournament if absent. Existing name and capacity are never synchronized from config. */
   public ensureTournament(id: string, name: string, maxTeams: number = 16): void {
     const existing = this.db.prepare('SELECT id FROM tournaments WHERE id = ?').get(id);
     if (!existing) {
@@ -123,7 +124,15 @@ export class TeamRepository {
     try {
       // Invariant 2: Capacity check
       const tourneyRow = this.db.prepare('SELECT max_teams FROM tournaments WHERE id = ?').get(input.tournamentId) as any;
-      const maxTeams = tourneyRow ? Number(tourneyRow.max_teams) : 16;
+      if (!tourneyRow) {
+        this.db.exec('ROLLBACK;');
+        return {
+          success: false,
+          code: 'TOURNAMENT_NOT_FOUND',
+          error: `Giải đấu "${input.tournamentId}" chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.`
+        };
+      }
+      const maxTeams = Number(tourneyRow.max_teams);
 
       const activeCountRow = this.db.prepare(`
         SELECT COUNT(*) as count FROM teams 

@@ -15,13 +15,14 @@ async function bootstrap() {
   console.log('📦 Database initialized and schema verified.');
 
   // 3. Bootstrap Active Tournament
-  // This MUST happen before any registration is accepted, so that registerTeam()
-  // always finds the tournament with the correct max_teams from config (not a
-  // hardcoded default). If the tournament already exists, ensureTournament is a no-op.
+  // MAX_TEAMS is creation input only. Once a tournament exists, its stored name
+  // and max_teams remain authoritative across bot restarts and config edits.
   const repo = new TeamRepository(db);
   const tournamentDisplayName = config.TOURNAMENT_NAME ?? `UMA Cup (${config.ACTIVE_TOURNAMENT_ID})`;
   repo.ensureTournament(config.ACTIVE_TOURNAMENT_ID, tournamentDisplayName, config.MAX_TEAMS);
-  console.log(`🏆 Tournament "${config.ACTIVE_TOURNAMENT_ID}" ready (capacity: ${config.MAX_TEAMS} teams).`);
+  const tournament = repo.getTournament(config.ACTIVE_TOURNAMENT_ID);
+  if (!tournament) throw new Error(`Tournament "${config.ACTIVE_TOURNAMENT_ID}" was not created.`);
+  console.log(`🏆 Tournament "${tournament.id}" ready (capacity: ${tournament.maxTeams} teams).`);
 
   // 4. Create Bot Client
   const { client } = createBotClient(db);

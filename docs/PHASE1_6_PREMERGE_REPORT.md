@@ -64,8 +64,8 @@ causing `UI capacity != database capacity`.
 - `TOURNAMENT_NAME` added to `env.ts` (`default: 'UMA Cup 2027'`) and `.env.example`.
 
 ### Result
-- DB capacity always matches `config.MAX_TEAMS`.
-- Prevents any silent capacity mismatch.
+- On initial creation, DB capacity takes `config.MAX_TEAMS`.
+- After creation, SQLite `tournaments.max_teams` remains authoritative. Later `.env` edits do not silently change a live tournament.
 
 ---
 
@@ -84,7 +84,7 @@ This was misleading to members browsing the panel.
 | `activeCount` | PENDING + APPROVED + NEEDS_CORRECTION |
 | `approvedCount` | APPROVED only |
 | `pendingOrCorrectionCount` | PENDING + NEEDS_CORRECTION |
-| `maxTeams` | Total capacity from config |
+| `maxTeams` | Persisted tournament capacity from SQLite |
 
 Panel now renders:
 ```
@@ -108,14 +108,13 @@ Added **Section 6** to `docs/ARCHITECTURE.md` documenting:
 
 ## 6. Fix 5 — Clean PR #1 Body (Shell Escaping Artifacts)
 
-PR #1 body will be rewritten using `gh pr edit 1 --body-file <tempfile>` to
-eliminate shell quoting artifacts from previous edits.
+PR #1 body was cleaned after the Phase 1.6 push. The merge checklist now records the verified CI result while leaving human review and Ready for Review unchecked.
 
 ---
 
 ## 7. Fix 6 — PROJECT_STATE Commit SHA Accuracy
 
-See `PROJECT_STATE.md` for updated commit history including Phase 1.6.
+Phase 1.6 was pushed as `3107dc6` (`fix: active-only uniqueness, max-teams bootstrap, panel ux, phase 1.6 tests`). See `PROJECT_STATE.md` for the full commit history.
 
 ---
 
@@ -172,9 +171,9 @@ All uniqueness enforcement is transactional, not index-based.
 
 ## 10. CI Verification
 
-> After pushing to `feat/phase0-phase1`, verify that GitHub Actions CI run is green
-> at `https://github.com/Phuchello/UMA-BOT/actions` before merging.
-> Do NOT claim CI is green until the Actions dashboard confirms it.
+Phase 1.6 was pushed to `feat/phase0-phase1`. GitHub Actions run `36287888779` for commit `3107dc6` completed with conclusion `success`.
+
+Phase 1.6.1 adds two runtime capacity tests. They verify config drift from 3 to 15 leaves the DB name and capacity unchanged; panel, status, and registration button display 3; the fourth registration is rejected; and missing tournaments produce a clear error.
 
 ---
 
@@ -183,9 +182,8 @@ All uniqueness enforcement is transactional, not index-based.
 | Risk | Severity | Notes |
 |------|----------|-------|
 | Dev DBs with old UNIQUE indexes | Low | Local only; must delete `data/tournament.sqlite` |
-| `ensureTournament` is now a pure no-op after first boot | Low | If `ACTIVE_TOURNAMENT_ID` changes, old data remains |
+| `ensureTournament` preserves existing tournament configuration | Low | A new `ACTIVE_TOURNAMENT_ID` creates a separate row; existing rows remain |
 | Multi-instance not supported | Low | Documented; out of scope for v1 |
-| PR #1 body formatting | Cosmetic | Will be corrected in this commit |
 
 ---
 
@@ -193,9 +191,8 @@ All uniqueness enforcement is transactional, not index-based.
 
 ```
 READY_TO_MERGE — pending:
-  1. GitHub Actions CI green (verify at Actions dashboard after push)
-  2. Human review and explicit PR approval
-  3. PR #1 marked Ready for Review (not Draft) by human
+  1. Human review and explicit PR approval
+  2. PR #1 marked Ready for Review (not Draft) by maintainer
 ```
 
 Do NOT merge automatically. Do NOT mark PR ready without human decision.

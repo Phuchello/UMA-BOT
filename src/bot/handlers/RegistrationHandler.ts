@@ -7,6 +7,7 @@ import {
   Client
 } from 'discord.js';
 import { TeamRepository } from '../../registration/TeamRepository.js';
+import { getTournamentCapacity } from '../../registration/TournamentCapacity.js';
 import { RegistrationParser } from '../../registration/RegistrationParser.js';
 import { RegistrationUI } from '../ui/RegistrationUI.js';
 import { getConfig, isStaffMember } from '../../config/env.js';
@@ -24,6 +25,12 @@ export class RegistrationHandler {
 
     // 1. Register Team Button
     if (customId === 'btn_register_team') {
+      const capacity = getTournamentCapacity(this.teamRepo, tournamentId);
+      if (!capacity) {
+        await interaction.reply({ content: '❌ Giải đấu đang hoạt động chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.', ephemeral: true });
+        return;
+      }
+
       const activeCaptainTeam = this.teamRepo.getCaptainActiveTeam(tournamentId, interaction.user.id);
 
       if (activeCaptainTeam) {
@@ -34,10 +41,9 @@ export class RegistrationHandler {
         return;
       }
 
-      const activeCount = this.teamRepo.getActiveTeamsCount(tournamentId);
-      if (activeCount >= config.MAX_TEAMS) {
+      if (capacity.activeCount >= capacity.maxTeams) {
         await interaction.reply({
-          content: `⚠️ Giải đấu hiện đã đủ số lượng đội đăng ký (${config.MAX_TEAMS}/${config.MAX_TEAMS} đội). Vui lòng theo dõi các thông báo tiếp theo từ Ban Tổ Chức!`,
+          content: `⚠️ Giải đấu hiện đã đủ số lượng đội đăng ký (${capacity.activeCount}/${capacity.maxTeams} đội). Vui lòng theo dõi các thông báo tiếp theo từ Ban Tổ Chức!`,
           ephemeral: true
         });
         return;
@@ -358,13 +364,18 @@ export class RegistrationHandler {
           return;
         }
 
+        const capacity = getTournamentCapacity(this.teamRepo, tournamentId);
+        if (!capacity) {
+          await interaction.reply({ content: '❌ Giải đấu đang hoạt động chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.', ephemeral: true });
+          return;
+        }
+
         const approved = this.teamRepo.listTeams(tournamentId, 'APPROVED');
         const pending = this.teamRepo.listTeams(tournamentId, 'PENDING');
         const correction = this.teamRepo.listTeams(tournamentId, 'NEEDS_CORRECTION');
         const approvedCount = approved.length;
         const pendingOrCorrectionCount = pending.length + correction.length;
-        const activeCount = approvedCount + pendingOrCorrectionCount;
-        const embed = RegistrationUI.createRegistrationPanelEmbed(activeCount, approvedCount, pendingOrCorrectionCount, config.MAX_TEAMS);
+        const embed = RegistrationUI.createRegistrationPanelEmbed(capacity.activeCount, approvedCount, pendingOrCorrectionCount, capacity.maxTeams);
         const buttons = RegistrationUI.createRegistrationPanelButtons();
 
         await interaction.reply({ embeds: [embed], components: [buttons] });
@@ -401,6 +412,12 @@ export class RegistrationHandler {
       }
 
       if (subcommand === 'status') {
+        const capacity = getTournamentCapacity(this.teamRepo, tournamentId);
+        if (!capacity) {
+          await interaction.reply({ content: '❌ Giải đấu đang hoạt động chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.', ephemeral: true });
+          return;
+        }
+
         const approved = this.teamRepo.listTeams(tournamentId, 'APPROVED');
         const pending = this.teamRepo.listTeams(tournamentId, 'PENDING');
         const rejected = this.teamRepo.listTeams(tournamentId, 'REJECTED');
@@ -409,11 +426,11 @@ export class RegistrationHandler {
         await interaction.reply({
           content:
             `📊 **TRẠNG THÁI GIẢI ĐẤU UMA CUP (${tournamentId}):**\n` +
-            `• **Đã duyệt chính thức:** ${approved.length} / ${config.MAX_TEAMS} đội\n` +
+            `• **Đã duyệt chính thức:** ${approved.length} / ${capacity.maxTeams} đội\n` +
             `• **Đang chờ BTC duyệt:** ${pending.length} đội\n` +
             `• **Yêu cầu chỉnh sửa:** ${correction.length} đội\n` +
             `• **Đã từ chối:** ${rejected.length} đội\n` +
-            `• **Hạn ngạch:** Tối đa ${config.MAX_TEAMS} đội (5 tuyển thủ chính/đội)`,
+            `• **Hạn ngạch:** Tối đa ${capacity.maxTeams} đội (5 tuyển thủ chính/đội)`,
           ephemeral: true
         });
         return;
