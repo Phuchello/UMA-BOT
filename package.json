@@ -4,6 +4,9 @@
   "description": "Vietnamese-first Discord tournament bot for UMA Club",
   "type": "module",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
