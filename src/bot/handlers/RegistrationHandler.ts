@@ -30,6 +30,10 @@ export class RegistrationHandler {
         await interaction.reply({ content: '❌ Giải đấu đang hoạt động chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.', ephemeral: true });
         return;
       }
+      if (this.teamRepo.getTournament(tournamentId)?.status !== 'registration_open') {
+        await interaction.reply({ content: '🔒 Đăng ký đã khóa.', ephemeral: true });
+        return;
+      }
 
       const activeCaptainTeam = this.teamRepo.getCaptainActiveTeam(tournamentId, interaction.user.id);
 
@@ -71,6 +75,10 @@ export class RegistrationHandler {
 
     // 4. Edit Corrected Team Button (Captain action)
     if (customId.startsWith('btn_edit_team_')) {
+      if (this.teamRepo.getTournament(tournamentId)?.status !== 'registration_open') {
+        await interaction.reply({ content: '🔒 Giai đoạn chỉnh sửa đơn đã kết thúc.', ephemeral: true });
+        return;
+      }
       const teamId = customId.replace('btn_edit_team_', '');
       const team = this.teamRepo.getTeam(teamId);
 
@@ -375,8 +383,9 @@ export class RegistrationHandler {
         const correction = this.teamRepo.listTeams(tournamentId, 'NEEDS_CORRECTION');
         const approvedCount = approved.length;
         const pendingOrCorrectionCount = pending.length + correction.length;
-        const embed = RegistrationUI.createRegistrationPanelEmbed(capacity.activeCount, approvedCount, pendingOrCorrectionCount, capacity.maxTeams);
-        const buttons = RegistrationUI.createRegistrationPanelButtons();
+        const status = this.teamRepo.getTournament(tournamentId)!.status;
+        const embed = RegistrationUI.createRegistrationPanelEmbed(capacity.activeCount, approvedCount, pendingOrCorrectionCount, capacity.maxTeams, status);
+        const buttons = RegistrationUI.createRegistrationPanelButtons(status);
 
         await interaction.reply({ embeds: [embed], components: [buttons] });
         return;
@@ -401,7 +410,7 @@ export class RegistrationHandler {
         }
 
         const embed = RegistrationUI.createMyTeamEmbed(team);
-        const buttons = RegistrationUI.createMyTeamButtons(team);
+        const buttons = RegistrationUI.createMyTeamButtons(team, this.teamRepo.getTournament(tournamentId)?.status);
 
         await interaction.reply({
           embeds: [embed],

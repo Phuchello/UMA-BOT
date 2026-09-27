@@ -22,4 +22,10 @@ export const umaCommand = new SlashCommandBuilder()
     sub
       .setName('status')
       .setDescription('Xem thống kê và tiến độ giải đấu hiện tại')
+  )
+  .addSubcommand(sub => sub.setName('checkin-open').setDescription('Khóa đăng ký và mở check-in (BTC)'))
+  .addSubcommand(sub => sub.setName('check-in').setDescription('Đội trưởng điểm danh đội đã được duyệt'))
+  .addSubcommand(sub => sub.setName('checkins').setDescription('Xem tình hình điểm danh đội'))
+  .addSubcommand(sub => sub.setName('draw').setDescription('Bốc thăm nhánh đấu cho đội đã check-in (BTC)'))
+  .addSubcommand(sub => sub.setName('bracket').setDescription('Xem nhánh đấu UMA CUP')
   );

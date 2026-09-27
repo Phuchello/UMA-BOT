@@ -37,9 +37,20 @@
 - [x] Create `docs/PHASE1_5_HARDENING_REPORT.md`
 - [x] Update Draft PR #1 body
 
-## Phase 2: Tournament Execution & Match Management (Deferred)
-- [ ] Implement check-in workflow for approved teams
-- [ ] Build bracket generation & seeding based on Phase 0 engine adapter
-- [ ] Automated private match thread creation for competing captains and referees
-- [ ] Screenshot evidence upload & score submission modal
-- [ ] BTC score verification & match advancement
+## Phase 2A: Lock / Check-in / Draw / Bracket
+- [x] Lock registration after all active applications receive a final decision
+- [x] Captain check-in for approved teams, stored independently of approval
+- [x] Random persisted seed assignment for approved, checked-in teams only
+- [x] Generate and restore Single Elimination bracket through the engine adapter
+- [x] Persist stable application match IDs and explicit BYE advancement paths
+- [x] Add public-safe check-in, status and bracket views
+- [ ] Human review and Phase 2A Discord E2E after merge
+
+## Phase 2B: Match Rooms / Match Lifecycle (Deferred)
+- [ ] Automated private match threads for captains and referees
+- [ ] Match scheduling and lifecycle controls
+
+## Phase 3: Results / Evidence / Referee / Advancement (Deferred)
+- [ ] Screenshot evidence upload and score submission
+- [ ] BTC/referee result verification and disputes
+- [ ] Score advancement, champion ceremony and livestream integration

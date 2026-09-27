@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import type { ParsedPlayerInput } from './RegistrationParser.js';
 
 export type TeamStatus = 'DRAFT' | 'PENDING' | 'NEEDS_CORRECTION' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+export type TournamentStatus = 'registration_open' | 'checkin_open' | 'bracket_ready' | 'in_progress';
 
 export const ACTIVE_CAPACITY_STATUSES: TeamStatus[] = ['PENDING', 'APPROVED', 'NEEDS_CORRECTION'];
 
@@ -68,14 +69,14 @@ export class TeamRepository {
     }
   }
 
-  public getTournament(id: string): { id: string; name: string; maxTeams: number; status: string } | null {
+  public getTournament(id: string): { id: string; name: string; maxTeams: number; status: TournamentStatus } | null {
     const row = this.db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id) as any;
     if (!row) return null;
     return {
       id: row.id,
       name: row.name,
       maxTeams: row.max_teams,
-      status: row.status
+      status: row.status as TournamentStatus
     };
   }
 
@@ -123,7 +124,7 @@ export class TeamRepository {
     this.db.exec('BEGIN IMMEDIATE TRANSACTION;');
     try {
       // Invariant 2: Capacity check
-      const tourneyRow = this.db.prepare('SELECT max_teams FROM tournaments WHERE id = ?').get(input.tournamentId) as any;
+      const tourneyRow = this.db.prepare('SELECT max_teams, status FROM tournaments WHERE id = ?').get(input.tournamentId) as any;
       if (!tourneyRow) {
         this.db.exec('ROLLBACK;');
         return {
@@ -131,6 +132,10 @@ export class TeamRepository {
           code: 'TOURNAMENT_NOT_FOUND',
           error: `Giải đấu "${input.tournamentId}" chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.`
         };
+      }
+      if (tourneyRow.status !== 'registration_open') {
+        this.db.exec('ROLLBACK;');
+        return { success: false, code: 'REGISTRATION_CLOSED', error: 'Đăng ký đã khóa. Không thể nộp đơn mới.' };
       }
       const maxTeams = Number(tourneyRow.max_teams);
 
@@ -305,6 +310,11 @@ export class TeamRepository {
 
     this.db.exec('BEGIN IMMEDIATE TRANSACTION;');
     try {
+      const tournament = this.getTournament(input.tournamentId);
+      if (!tournament || tournament.status !== 'registration_open') {
+        this.db.exec('ROLLBACK;');
+        return { success: false, code: 'REGISTRATION_CLOSED', error: 'Đăng ký đã khóa. Không thể nộp lại đơn chỉnh sửa.' };
+      }
       const existingTeam = this.db.prepare('SELECT * FROM teams WHERE id = ?').get(input.teamId) as any;
       if (!existingTeam) {
         this.db.exec('ROLLBACK;');
@@ -690,6 +700,10 @@ export class TeamRepository {
       return { success: false, code: 'NOT_FOUND', error: 'Đội không tồn tại trong hệ thống.' };
     }
 
+    if (this.getTournament(team.tournamentId)?.status !== 'registration_open') {
+      return { success: false, code: 'REGISTRATION_CLOSED', error: 'Đăng ký đã khóa. Không thể thay đổi đội hình tham gia.' };
+    }
+
     if (!['PENDING', 'NEEDS_CORRECTION', 'APPROVED'].includes(team.status)) {
       return {
         success: false,
@@ -704,6 +718,7 @@ export class TeamRepository {
       UPDATE teams 
       SET status = 'WITHDRAWN', rejection_reason = ?, updated_at = ? 
       WHERE id = ? AND status IN ('PENDING', 'NEEDS_CORRECTION', 'APPROVED')
+        AND EXISTS (SELECT 1 FROM tournaments WHERE id = teams.tournament_id AND status = 'registration_open')
     `).run(reason.trim(), now, teamId);
 
     if (updateResult.changes === 0) {

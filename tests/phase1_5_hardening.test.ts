@@ -516,8 +516,10 @@ describe('Phase 1.5 Hardening: Tournament Identity, Correction Lifecycle & Capac
       expect(desc).not.toContain('Hệ thống tự động tạo phòng');
       expect(desc).not.toContain('gửi ảnh chụp KDA để trọng tài kiểm tra');
 
-      // Must explicitly note future availability
-      expect(desc).toContain('giai đoạn tiếp theo (Phase 2)');
+      // Phase 2A is now available; result and match-room flows remain future work.
+      expect(desc).toContain('/uma check-in');
+      expect(desc).toContain('/uma bracket');
+      expect(desc).toContain('Phòng riêng thi đấu và báo kết quả sẽ được bổ sung sau');
     });
   });
 });
