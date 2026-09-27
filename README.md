@@ -13,7 +13,7 @@ Vietnamese-first Discord tournament system tailored specifically for UMA Club.
 ## Current Project Status
 
 - **Phase 0 (Tournament Engine Validation):** Complete (`USE_WITH_ADAPTER`)
-- **Phase 1 & 1.5 (Domain, Registration, Hardening & CI):** Complete (43/43 tests passing, 100% pass rate)
+- **Phase 1 (Domain, Registration, Hardening & CI):** Complete; automated tests pass, Discord E2E smoke test pending
 - **Phase 2+ (Matches, Bracket, Evidence & Scoring):** Deferred to subsequent milestone
 
 *Note: Features not yet built are strictly marked as pending or planned. Unfinished features are never claimed as operational.*
@@ -50,14 +50,19 @@ Copy `.env.example` to `.env` and fill in required values:
 cp .env.example .env
 ```
 
+Outside `NODE_ENV=test`, the Discord application, guild, channel, and staff role IDs must be supplied explicitly as 17–20 digit IDs. `CI=true` does not enable test defaults. Replace every ID placeholder in `.env.example` before starting the bot or registering slash commands; use IDs from the intended guild, never another server's IDs.
+
 | Variable | Description |
 | :--- | :--- |
 | `DISCORD_TOKEN` | Discord Bot authentication token |
 | `DISCORD_CLIENT_ID` | Discord Application client ID |
-| `DISCORD_GUILD_ID` | UMA GAMING Discord Server ID |
+| `DISCORD_GUILD_ID` | Intended Discord guild ID |
 | `ACTIVE_TOURNAMENT_ID` | Active tournament identifier (e.g. `uma-cup-2027`) |
 | `BTC_CHANNEL_ID` | Channel ID for BTC tournament management (`#🎛️・ban-tổ-chức`) |
 | `REGISTRATION_CHANNEL_ID` | Channel ID for public registration (`#📝・đăng-ký-thi-đấu`) |
+| `REFEREE_CHANNEL_ID` | Referee channel ID |
+| `RESULTS_CHANNEL_ID` | Results channel ID |
+| `TOURNAMENT_ADMIN_ROLE_IDS` | Comma-separated staff role IDs (at least one) |
 | `DATABASE_PATH` | Path to SQLite database file (e.g. `data/tournament.sqlite`) |
 
 ### Running Tests
