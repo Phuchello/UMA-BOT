@@ -1,3 +1,4 @@
+import { errorCategory } from '../../operations/logging.js';
 import {
   ButtonInteraction,
   ModalSubmitInteraction,
@@ -215,7 +216,7 @@ export class RegistrationHandler {
           this.teamRepo.setBtcReviewMessageId(team.id, reviewMessage.id);
         }
       } catch (err) {
-        console.error('Failed to post to BTC review channel:', err);
+        console.error('Failed to post to BTC review channel:', errorCategory(err));
       }
 
       await interaction.reply({
@@ -295,7 +296,7 @@ export class RegistrationHandler {
           }
         }
       } catch (err) {
-        console.error('Failed to refresh BTC review message on resubmit:', err);
+        console.error('Failed to refresh BTC review message on resubmit:', errorCategory(err));
       }
 
       await interaction.reply({

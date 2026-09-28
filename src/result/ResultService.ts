@@ -1,3 +1,4 @@
+import { errorCategory } from '../operations/logging.js';
 import crypto from 'node:crypto';
 import type { TournamentEngine } from '../tournament/TournamentEngine.js';
 import { TournamentOrganizerAdapter } from '../tournament/TournamentOrganizerAdapter.js';
@@ -73,7 +74,7 @@ export class ResultService {
     } catch (error) {
       try { await this.gateway.deleteEvidenceMessage(threadId, archived.messageId); }
       catch (cleanupError) {
-        console.error(`Orphan result evidence message ${archived.messageId} for match ${match.id}; cleanup failed`, cleanupError);
+        console.error(`Orphan result evidence message ${archived.messageId} for match ${match.id}; cleanup failed`, errorCategory(cleanupError));
       }
       throw error;
     }
@@ -389,7 +390,7 @@ export class ResultService {
     try {
       await update;
     } catch (error) {
-      console.error(`Result state saved for ${matchId}, Discord card refresh failed:`, error);
+      console.error(`Result state saved for ${matchId}, Discord card refresh failed:`, errorCategory(error));
       throw new ResultError('CARD_REFRESH_FAILED', 'Đã lưu kết quả nhưng chưa cập nhật được thẻ Discord. Dùng /uma result-refresh.');
     } finally {
       if (this.cardUpdates.get(matchId) === update) this.cardUpdates.delete(matchId);

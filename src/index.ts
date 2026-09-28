@@ -1,13 +1,15 @@
+import { errorCategory } from './operations/logging.js';
 import { getConfig } from './config/env.js';
 import { createDatabase } from './database/Database.js';
 import { TeamRepository } from './registration/TeamRepository.js';
 import { TournamentRepository } from './tournament/TournamentRepository.js';
 import { TournamentService } from './tournament/TournamentService.js';
-import { createBotClient, deployCommands } from './bot/client.js';
+import { createBotClient } from './bot/client.js';
 import { pathToFileURL } from 'node:url';
 import { installGracefulShutdown } from './operations/shutdown.js';
 
 async function bootstrap() {
+  if (process.argv.includes('--deploy')) throw new Error('--deploy was removed; use npm run deploy:commands separately.');
   console.log('🚀 Initializing UMA Tournament Bot...');
 
   // 1. Validate Environment
@@ -45,8 +47,6 @@ async function bootstrap() {
     publicationService.validatePersistedState(tournament.id);
     streamService.validatePersistedState(tournament.id);
 
-    // Only an explicit --deploy registers commands; startup never publishes.
-    if (process.argv.includes('--deploy')) await deployCommands();
     await client.login(config.DISCORD_TOKEN);
   } catch (error) {
     await shutdown.stop();
@@ -62,7 +62,7 @@ export function isDirectExecution(moduleUrl: string, argvEntry?: string): boolea
 // Only auto-run if directly executed
 if (isDirectExecution(import.meta.url, process.argv[1])) {
   bootstrap().catch(err => {
-    console.error('Fatal initialization error:', err);
+    console.error('Fatal initialization error:', errorCategory(err));
     process.exit(1);
   });
 }

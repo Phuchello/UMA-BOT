@@ -1,7 +1,19 @@
 # PROJECT STATE — UMA TOURNAMENT BOT
 
 ## Current Phase
-Phase 3B Discord E2E Validated (PASS_WITH_LIMITATIONS) / Awaiting Dependency License Review
+Production Deployment Pack IMPLEMENTED / Awaiting License Decision + Explicit Production Deployment
+
+## Production deployment pack checkpoint
+
+- **Branch:** `ops/production-deployment-pack`
+- **Verified main base:** `9dcccdce80498503229bd17b8939cb27276fa61c` (main CI `36366357295`, success)
+- **Baseline:** 196/196 tests, 13 suites; typecheck/build/diff-check PASS
+- **Prepared architecture:** One Ubuntu VPS, one non-root systemd bot, persistent SQLite outside immutable releases; replicas = 1
+- **Operations:** Separate REST-only command deployment, offline configuration preflight, explicit install/build/activation, guarded update/code rollback/restore, daily verified backup timer, manual dry-run-first retention, journald logs
+- **Verification target:** 221/221 automated tests across 15 suites; Linux shell/unit static checks in CI; Ubuntu installation/reboot/restore rehearsal remains a later human gate
+- **Safety:** No Discord login/command deployment, Test/Production Guild mutation, production token use, production DB creation, VPS mutation or service activation
+- **Status:** Awaiting human PR review, license decision, audit acceptance and explicit production deployment. Not deployed, not 24/7 live. `LICENSE_REVIEW_REQUIRED` remains unchanged
+- **Operator documentation:** `docs/PRODUCTION_RUNBOOK.md`, `docs/PRODUCTION_DEPLOYMENT_CHECKLIST.md`, `docs/PRODUCTION_DEPLOYMENT_PACK_REPORT.md`
 
 ## Phase 3B checkpoint
 - **Branch:** `feat/phase3b-finalization` (Merged into `main` via PR #12)

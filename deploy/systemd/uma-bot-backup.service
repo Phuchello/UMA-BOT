@@ -1,0 +1,23 @@
+[Unit]
+Description=Verified UMA SQLite snapshot (no Discord connection)
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=uma-bot
+Group=uma-bot
+WorkingDirectory=/opt/uma-bot/current
+Environment=DATABASE_PATH=/var/lib/uma-bot/tournament.sqlite
+ExecStart=/usr/bin/flock --nonblock /run/uma-bot-ops/operations.lock /usr/bin/node /opt/uma-bot/current/dist/operations/scheduledBackup.js
+ReadWritePaths=/run/uma-bot-ops
+TimeoutStartSec=300
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/uma-bot
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal

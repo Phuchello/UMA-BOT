@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily UMA SQLite backup at 02:30 server local time
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+AccuracySec=1min
+Unit=uma-bot-backup.service
+
+[Install]
+WantedBy=timers.target

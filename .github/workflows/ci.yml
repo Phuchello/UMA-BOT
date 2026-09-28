@@ -38,3 +38,25 @@ jobs:
 
       - name: Build TypeScript
         run: npm run build
+
+      - name: Validate deployment shell and systemd artifacts (static only)
+        run: |
+          for script in deploy/scripts/*.sh; do bash -n "$script"; done
+          # setup-node uses the hosted toolcache, not the production /usr/bin layout.
+          # Verify temporary copies with only executable paths adapted to this host.
+          export SYSTEMD_VERIFY_DIR="$(mktemp -d)"
+          export SYSTEMD_VERIFY_NODE="$(command -v node)"
+          export SYSTEMD_VERIFY_NPM="$(command -v npm)"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          destination = Path(os.environ['SYSTEMD_VERIFY_DIR'])
+          for source in Path('deploy/systemd').iterdir():
+              if source.suffix not in {'.service', '.timer'}:
+                  continue
+              text = source.read_text(encoding='utf-8')
+              text = text.replace('/usr/bin/node', os.environ['SYSTEMD_VERIFY_NODE'])
+              text = text.replace('/usr/bin/npm', os.environ['SYSTEMD_VERIFY_NPM'])
+              (destination / source.name).write_text(text, encoding='utf-8')
+          PY
+          systemd-analyze verify "$SYSTEMD_VERIFY_DIR"/*.service "$SYSTEMD_VERIFY_DIR"/*.timer

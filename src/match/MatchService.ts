@@ -1,3 +1,4 @@
+import { errorCategory } from '../operations/logging.js';
 import { MatchRepository, type MatchRecord, type MatchState } from './MatchRepository.js';
 import type { MatchRoomGateway } from './MatchRoomGateway.js';
 import { TournamentRepository } from '../tournament/TournamentRepository.js';
@@ -90,7 +91,7 @@ export class MatchService {
     if (match.room) {
       try { await this.gateway.addMember(match.room.threadId, refereeId); }
       catch (error) {
-        console.error(`Referee ${refereeId} assigned to match ${match.id} but private-thread admission failed:`, error);
+        console.error(`Referee ${refereeId} assigned to match ${match.id} but private-thread admission failed:`, errorCategory(error));
         throw new MatchError('REFEREE_ADMISSION_FAILED', 'Đã lưu trọng tài nhưng chưa thêm được vào phòng. BTC hãy thử gán lại để hoàn tất.');
       }
       await this.refreshCard(match);
@@ -134,10 +135,10 @@ export class MatchService {
         if (threadId) {
           try { await this.gateway.deleteThread(threadId); }
           catch (cleanupError) {
-            console.error(`Recoverable orphan match thread ${threadId} for match ${match.id}: cleanup failed`, cleanupError);
+            console.error(`Recoverable orphan match thread ${threadId} for match ${match.id}: cleanup failed`, errorCategory(cleanupError));
           }
         }
-        console.error(`Failed to create match room for R${match.round}-M${match.number}:`, error);
+        console.error(`Failed to create match room for R${match.round}-M${match.number}:`, errorCategory(error));
       }
     }
     return summary;
@@ -263,7 +264,7 @@ export class MatchService {
     this.cardUpdates.set(match.id, update);
     try { await update; }
     catch (error) {
-      console.error(`Match ${match.id} persisted but starter card refresh failed:`, error);
+      console.error(`Match ${match.id} persisted but starter card refresh failed:`, errorCategory(error));
       throw new MatchError('CARD_UPDATE_FAILED', 'Thao tác đã lưu nhưng chưa cập nhật được thẻ phòng trận. BTC cần kiểm tra phòng.');
     } finally {
       if (this.cardUpdates.get(match.id) === update) this.cardUpdates.delete(match.id);

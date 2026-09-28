@@ -1,3 +1,4 @@
+import { errorCategory } from '../../operations/logging.js';
 import { ButtonInteraction, ChatInputCommandInteraction, GuildMember, ModalSubmitInteraction } from 'discord.js';
 import { getConfig, isStaffMember } from '../../config/env.js';
 import { ResultError, ResultService } from '../../result/ResultService.js';
@@ -77,7 +78,7 @@ export class ResultHandler {
     return member.permissions.has('Administrator') || isStaffMember(Array.from(member.roles.cache.keys()));
   }
   private async respondError(interaction: ResultInteraction, error: unknown): Promise<void> {
-    if (!(error instanceof ResultError)) console.error('Result interaction failed:', error);
+    if (!(error instanceof ResultError)) console.error('Result interaction failed:', errorCategory(error));
     const content = error instanceof ResultError ? `⚠️ ${error.message}` : '⚠️ Không thể xử lý kết quả lúc này. Hãy báo BTC kiểm tra phòng trận.';
     if (interaction.deferred) await interaction.editReply(content);
     else await interaction.reply({ content, ephemeral: true });

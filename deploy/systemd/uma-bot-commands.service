@@ -1,0 +1,23 @@
+[Unit]
+Description=Explicit one-shot UMA guild command registration
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=uma-bot
+Group=uma-bot
+WorkingDirectory=/opt/uma-bot/current
+EnvironmentFile=/etc/uma-bot/uma-bot.env
+ExecStartPre=/usr/bin/node /opt/uma-bot/current/dist/scripts/validateConfig.js --expect-database /var/lib/uma-bot/tournament.sqlite
+ExecStart=/usr/bin/npm run deploy:commands
+TimeoutStartSec=120
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal
