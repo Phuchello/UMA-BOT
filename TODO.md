@@ -71,6 +71,6 @@
 - [x] Livestream/VOD and caster metadata with HTTPS platform allowlist
 - [x] Guarded approved-result correction, immutable history, and bracket reconciliation
 - [x] Production doctor, SQLite backup, graceful shutdown, and runbook
-- [ ] Human review and separate post-merge Phase 3B Discord E2E
+- [x] Human review and separate post-merge Phase 3B Discord E2E
 - [ ] LICENSE_REVIEW_REQUIRED and explicit production release approval
 - [ ] Production deployment (not part of Phase 3B implementation)
