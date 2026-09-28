@@ -1,3 +1,4 @@
+import { errorCategory } from './logging.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -33,5 +34,5 @@ function main(): void {
   console.log(`SQLite backup created: ${createSqliteBackup(source, target)}`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try { main(); } catch (error) { console.error(error instanceof Error ? error.message : 'Backup failed'); process.exitCode = 1; }
+  try { main(); } catch (error) { console.error(`Backup failed (${errorCategory(error)}); inspect source, destination, integrity and permissions.`); process.exitCode = 1; }
 }

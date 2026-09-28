@@ -1,8 +1,7 @@
+import { errorCategory } from '../operations/logging.js';
 import {
   Client,
-  GatewayIntentBits,
-  REST,
-  Routes
+  GatewayIntentBits
 } from 'discord.js';
 import { DatabaseSync } from 'node:sqlite';
 import { TeamRepository } from '../registration/TeamRepository.js';
@@ -18,7 +17,6 @@ import { ResultRepository } from '../result/ResultRepository.js';
 import { ResultService } from '../result/ResultService.js';
 import { DiscordEvidenceGateway } from './DiscordEvidenceGateway.js';
 import { ResultHandler } from './handlers/ResultHandler.js';
-import { umaCommand, umaCasterCommand } from './commands/umaCommand.js';
 import { StreamRepository } from '../stream/StreamRepository.js';
 import { StreamService } from '../stream/StreamService.js';
 import { PublicationRepository } from '../publication/PublicationRepository.js';
@@ -88,7 +86,7 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
         else await registrationHandler.handleModalSubmit(interaction);
       }
     } catch (err) {
-      console.error('Error handling interaction:', err);
+      console.error('Error handling interaction:', errorCategory(err));
       if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: '⚠️ Đã xảy ra lỗi trong quá trình xử lý yêu cầu. Vui lòng thử lại sau hoặc báo cho BTC.',
@@ -99,16 +97,4 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
   });
 
   return { client, teamRepo, matchService, resultService, publicationService, streamService };
-}
-
-export async function deployCommands(): Promise<void> {
-  const config = getConfig();
-  const rest = new REST({ version: '10' }).setToken(config.DISCORD_TOKEN);
-
-  console.log(`Deploying slash commands to Guild ${config.DISCORD_GUILD_ID}...`);
-  await rest.put(
-    Routes.applicationGuildCommands(config.DISCORD_CLIENT_ID, config.DISCORD_GUILD_ID),
-    { body: [umaCommand.toJSON(), umaCasterCommand.toJSON()] }
-  );
-  console.log('✅ Successfully registered slash commands for development guild.');
 }

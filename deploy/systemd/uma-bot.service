@@ -1,0 +1,33 @@
+[Unit]
+Description=UMA Tournament Bot (one SQLite writer)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=uma-bot
+Group=uma-bot
+WorkingDirectory=/opt/uma-bot/current
+EnvironmentFile=/etc/uma-bot/uma-bot.env
+ExecStartPre=/usr/bin/node /opt/uma-bot/current/dist/scripts/validateConfig.js --expect-database /var/lib/uma-bot/tournament.sqlite
+ExecStart=/usr/bin/node /opt/uma-bot/current/dist/index.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/uma-bot
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

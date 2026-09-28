@@ -1,6 +1,9 @@
 # Environment and secrets
 .env*
 !.env.example
+*.env
+*.env.*
+!*.env.example
 
 # Node dependencies and build artifacts
 node_modules/

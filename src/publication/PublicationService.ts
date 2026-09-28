@@ -1,3 +1,4 @@
+import { errorCategory } from '../operations/logging.js';
 import crypto from 'node:crypto';
 import { MatchRepository, type MatchRecord } from '../match/MatchRepository.js';
 import { ResultRepository, type CanonicalResult } from '../result/ResultRepository.js';
@@ -37,7 +38,7 @@ export class PublicationService {
           summary[state]++;
         } catch (error) {
           summary.failed++;
-          console.error(`Publication failed for match ${canonical.matchId}: ${error instanceof Error ? error.name : 'unknown error'}`);
+          console.error(`Publication failed for match ${canonical.matchId}: ${errorCategory(error)}`);
         }
       }
       if (this.results.tournamentStatus(tournamentId) === 'completed') {
@@ -55,7 +56,7 @@ export class PublicationService {
           summary[state]++;
         } catch (error) {
           summary.failed++;
-          console.error(`Champion publication failed for ${tournamentId}: ${error instanceof Error ? error.name : 'unknown error'}`);
+          console.error(`Champion publication failed for ${tournamentId}: ${errorCategory(error)}`);
         }
       }
       return summary;

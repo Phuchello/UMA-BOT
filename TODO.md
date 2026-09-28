@@ -74,3 +74,18 @@
 - [x] Human review and separate post-merge Phase 3B Discord E2E
 - [ ] LICENSE_REVIEW_REQUIRED and explicit production release approval
 - [ ] Production deployment (not part of Phase 3B implementation)
+
+## Production Deployment Pack
+
+Status: **IMPLEMENTED / Awaiting License Decision + Explicit Production Deployment**.
+
+- [x] REST-only one-shot command deployment separated from bot runtime
+- [x] Ubuntu installation/release/update/code rollback/guarded restore scripts
+- [x] One non-root systemd bot, daily backup service/timer, protected operations lock
+- [x] Persistent data/private env layout, offline preflight and journald logging audit
+- [x] Verified SQLite snapshots, conservative dry-run-first retention, emergency restore originals
+- [x] Operator runbook, permissions model, unchecked release checklist and offline tests
+- [ ] Human Draft PR review/merge and audit disposition
+- [ ] Ubuntu host installation/reboot/backup/restore rehearsal after separate authorization
+- [ ] LICENSE_REVIEW_REQUIRED decision documented separately
+- [ ] Explicit production authorization and deployment (not performed)

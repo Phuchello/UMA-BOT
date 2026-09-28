@@ -38,3 +38,8 @@ jobs:
 
       - name: Build TypeScript
         run: npm run build
+
+      - name: Validate deployment shell and systemd artifacts (static only)
+        run: |
+          for script in deploy/scripts/*.sh; do bash -n "$script"; done
+          systemd-analyze verify deploy/systemd/uma-bot.service deploy/systemd/uma-bot-backup.service deploy/systemd/uma-bot-backup.timer deploy/systemd/uma-bot-commands.service

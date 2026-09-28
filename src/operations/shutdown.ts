@@ -13,9 +13,10 @@ export function installGracefulShutdown(client: ShutdownClient, db: Pick<Databas
   const stop = (): Promise<void> => {
     if (stopping) return stopping;
     stopping = (async () => {
+      console.log('Stopping UMA bot; closing gateway and SQLite once.');
       uninstall();
       client.removeAllListeners('interactionCreate');
-      try { await client.destroy(); } finally { db.close(); }
+      try { await client.destroy(); } finally { db.close(); console.log('UMA bot stopped; SQLite closed.'); }
     })();
     return stopping;
   };

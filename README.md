@@ -17,7 +17,8 @@ Vietnamese-first Discord tournament system tailored specifically for UMA Club.
 - **Phase 2A (Lock, Check-in, Draw & Bracket):** Complete; Discord E2E passed with documented limitations.
 - **Phase 2B (Match Rooms & Lifecycle):** Complete; Discord E2E passed with documented limitations.
 - **Phase 3A (Results, Evidence & Advancement):** Complete; Discord E2E `PASS_WITH_LIMITATIONS`.
-- **Phase 3B (Public Results, Ceremony, Livestream & Final Hardening):** Complete; Discord E2E passed with documented limitations (Report: [PHASE3B_DISCORD_E2E_REPORT.md](docs/PHASE3B_DISCORD_E2E_REPORT.md)). Next: License review and production release approval.
+- **Production Deployment Pack:** IMPLEMENTED; Awaiting License Decision + Explicit Production Deployment. No production deployment or 24/7 live claim.
+- **Phase 3B (Public Results, Ceremony, Livestream & Final Hardening):** Complete; Discord E2E passed with documented limitations (Report: [PHASE3B_DISCORD_E2E_REPORT.md](docs/PHASE3B_DISCORD_E2E_REPORT.md)). Next: Human review of the deployment pack, license decision and explicit production authorization.
 
 *Note: Features not yet built are strictly marked as pending or planned. Unfinished features are never claimed as operational.*
 
@@ -33,7 +34,7 @@ The system is built as a standalone Discord application with clean separation of
 
 ### Prerequisites
 
-- Node.js 22+ (tested on Node 22 and 24; requires built-in `node:sqlite`)
+- Node.js >=22.13 (tested on Node 22 and 24; requires built-in `node:sqlite`)
 - npm 10+
 - Git
 
@@ -42,7 +43,7 @@ The system is built as a standalone Discord application with clean separation of
 ```bash
 git clone https://github.com/Phuchello/UMA-BOT.git
 cd UMA-BOT
-npm install
+npm ci
 ```
 
 ### Environment Variables
@@ -93,8 +94,17 @@ npm test
 
 ```bash
 npm run build
+# Only when intentionally registering guild commands:
+npm run deploy:commands
+# Separate long-running runtime:
 npm start
 ```
+
+## Production operations pack
+
+One Ubuntu VPS, one systemd-supervised non-root bot, one persistent SQLite file (`replicas = 1`). Releases live under `/opt/uma-bot/releases/<sha>`, private configuration under `/etc/uma-bot`, and data/backups under `/var/lib/uma-bot`. Installation and release assembly do not activate the bot; activation, command registration, update, rollback and restore are explicit operator actions. `--deploy` on the runtime is removed and refuses before DB/login. A daily 02:30 timer prepares verified snapshots; retention is guarded and dry run first. Journald is the log sink.
+
+See the [operator runbook](docs/PRODUCTION_RUNBOOK.md), [unchecked release checklist](docs/PRODUCTION_DEPLOYMENT_CHECKLIST.md), [pack report](docs/PRODUCTION_DEPLOYMENT_PACK_REPORT.md), and portable `deploy/uma-bot.env.example`. Production remains blocked by `LICENSE_REVIEW_REQUIRED` and explicit human authorization. No Discord connection or deployment was performed while preparing the pack.
 
 ## Documentation
 

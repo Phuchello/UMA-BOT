@@ -1,3 +1,4 @@
+import { errorCategory } from '../operations/logging.js';
 import { AttachmentBuilder, ChannelType, Client } from 'discord.js';
 import type { EvidenceGateway, EvidenceInput, ArchivedEvidence } from '../result/EvidenceGateway.js';
 import type { ResultSubmission } from '../result/ResultRepository.js';
@@ -39,7 +40,7 @@ export class DiscordEvidenceGateway implements EvidenceGateway {
       allowedMentions: { parse: [] } });
     const attachment = message.attachments.first();
     if (!attachment) {
-      await message.delete().catch(error => console.error(`Orphan evidence message ${message.id} cleanup failed`, error));
+      await message.delete().catch(error => console.error(`Orphan evidence message ${message.id} cleanup failed`, errorCategory(error)));
       throw new Error(`Evidence message ${message.id} has no uploaded attachment.`);
     }
     return { messageId: message.id, attachmentId: attachment.id, filename: attachment.name,
