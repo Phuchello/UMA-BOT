@@ -67,6 +67,12 @@ Phase 3B Discord E2E Validated (PASS_WITH_LIMITATIONS) / Awaiting Dependency Lic
 - PR #10 MERGED into `main` with merge commit `9c9157d` (Phase 3A results, evidence, and advancement).
 - PR #11 MERGED into `main` with merge commit `aa45dea` (Phase 3A Discord E2E retest report metadata hotfix).
 - PR #12 MERGED into `main` with merge commit `f3128d1` (Phase 3B public results, ceremony, livestream, correction, and ops).
+- PR #13 MERGED into `main` with merge commit `9dcccdc` (Phase 3B Discord E2E report).
+
+## Community Onboarding & Server Entrance (📌・BẮT ĐẦU)
+- **Architecture Decision:** UMA Tournament Bot remains strictly focused on tournament operations (registration, check-in, bracket, match rooms, referee, results, evidence, publication, streams, ops). Generic Discord server management (welcome, goodbye, auto-role, server rules) is explicitly delegated to **Discord Native** and **Dyno** to avoid bot bloat.
+- **Runbook:** `docs/DISCORD_START_HERE_SETUP.md` specifies the exact setup, permission matrix, channel topics, and message copy for `#👋・chào-mừng`, `#📢・thông-báo`, and `#📜・nội-quy`.
+- **Codebase Invariant:** Zero custom community code added to `src/*` or database tables. All 196 tournament tests across 13 suites remain clean and authoritative.
 
 ## Discord E2E Validation (Phase 3B)
 - **Status:** PASS_WITH_LIMITATIONS
@@ -136,10 +142,10 @@ Phase 3B Discord E2E Validated (PASS_WITH_LIMITATIONS) / Awaiting Dependency Lic
   2. `SECOND_CAPTAIN_READY_NOT_MANUALLY_VALIDATED`: Captain B was assigned to the bot member identity (`1553604832516898826`); readiness was confirmed via canonical domain fallback (`MatchService.confirmReady`) rather than physical Discord UI button interaction.
 
 ## Last Safe Checkpoint
-Main commit `f3128d1d7ab4306a8433556c2bdea9b7a85660cc` has successful CI run `36329144232`; Phase 3B Discord E2E is `PASS_WITH_LIMITATIONS`.
+Main commit `9dcccdc` (PR #13 merge); Phase 3B Discord E2E is `PASS_WITH_LIMITATIONS`. Community onboarding runbook produced in `docs/DISCORD_START_HERE_SETUP.md`.
 
 ## Exact Next Action
-Review and merge documentation PR `docs/phase3b-e2e`. Address dependency licensing review gate (`LICENSE_REVIEW_REQUIRED` for `tournament-pairings` GPL-3.0-or-later) and obtain explicit release approval before production deployment.
+Complete human review of `docs/DISCORD_START_HERE_SETUP.md`. Resolve licensing review gate (`LICENSE_REVIEW_REQUIRED`) before production deployment.
 
 ## Branch
-`docs/phase3b-e2e`
+`feat/community-onboarding`

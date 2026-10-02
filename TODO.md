@@ -74,3 +74,11 @@
 - [x] Human review and separate post-merge Phase 3B Discord E2E
 - [ ] LICENSE_REVIEW_REQUIRED and explicit production release approval
 - [ ] Production deployment (not part of Phase 3B implementation)
+
+## Community Onboarding & Server Entrance (📌・BẮT ĐẦU)
+- [x] Documented architecture separation: UMA Tournament Bot strictly tournament-only, generic community features handled by Discord Native & Dyno
+- [x] Finalized 3-channel structure (`#👋・chào-mừng`, `#📢・thông-báo`, `#📜・nội-quy`) and Vietnamese channel topics
+- [x] Channel permission matrix defined for `@everyone`, Staff, Dyno, and UMA Tournament Bot
+- [x] Dyno Welcome & Goodbye embeds and message copy specified using valid Dyno variables
+- [x] Discord Native 8-rule community charter and official announcement intro drafted
+- [x] Created runbook in `docs/DISCORD_START_HERE_SETUP.md` with manual setup checklist
