@@ -18,6 +18,7 @@ Vietnamese-first Discord tournament system tailored specifically for UMA Club.
 - **Phase 2B (Match Rooms & Lifecycle):** Complete; Discord E2E passed with documented limitations.
 - **Phase 3A (Results, Evidence & Advancement):** Complete; Discord E2E `PASS_WITH_LIMITATIONS`.
 - **Phase 3B (Public Results, Ceremony, Livestream & Final Hardening):** Complete; Discord E2E passed with documented limitations (Report: [PHASE3B_DISCORD_E2E_REPORT.md](docs/PHASE3B_DISCORD_E2E_REPORT.md)). Next: License review and production release approval.
+- **Community Setup Runbook (📌・BẮT ĐẦU):** Complete; documented in [DISCORD_START_HERE_SETUP.md](docs/DISCORD_START_HERE_SETUP.md) using Discord Native and Dyno (keeping UMA Tournament Bot strictly tournament-focused).
 
 *Note: Features not yet built are strictly marked as pending or planned. Unfinished features are never claimed as operational.*
 
