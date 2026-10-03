@@ -41,6 +41,14 @@ Reaction GIF loading is strictly auxiliary:
 - The bot completes the tournament interaction seamlessly with text and embeds only.
 - Missing media never aborts, rolls back, or errors out any tournament operation.
 
+### Production Safety Invariant (Zero Ephemeral Fallback)
+- In production (`NODE_ENV=production`), the bot searches **only** the configured persistent path:
+  `BOT_PERSONA_MEDIA_DIR` (default: `/var/lib/uma-bot/media/misaka/`).
+- The production bot **NEVER falls back to `/tmp`**.
+- If the persistent media path is unavailable or unreadable, reaction GIFs are automatically disabled and the bot degrades gracefully to text-only operations.
+- The `/tmp/misaka_staging` fallback is strictly reserved for local development and test environments.
+
+
 ---
 
 ## 2. Technical Validation Criteria
@@ -130,7 +138,7 @@ Used for score submission receipt, evidence verification underway.
 
 ---
 
-## 4. Local Preview
+## 4. Local Preview & Persistent Installation
 
 A standalone, CSS-styled HTML gallery is generated locally for asset inspection:
 ```bash
@@ -138,8 +146,7 @@ A standalone, CSS-styled HTML gallery is generated locally for asset inspection:
 file:///tmp/misaka_staging/index.html
 ```
 
-To sync the assets to the production system directory when granted sudo access:
+To install the curated assets persistently to `/var/lib/uma-bot/media/misaka/` with safe ownership (`uma-bot:uma-bot`, dirs: `755`, files: `644`):
 ```bash
-sudo mkdir -p /var/lib/uma-bot/media/misaka
-sudo cp -r /tmp/misaka_staging/* /var/lib/uma-bot/media/misaka/
+sudo ./scripts/install_persistent_media.sh
 ```

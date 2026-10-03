@@ -95,14 +95,30 @@ export class ReactionMedia {
       return null;
     }
 
-    const candidates = [
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction) {
+      const prodDir = process.env.BOT_PERSONA_MEDIA_DIR || '/var/lib/uma-bot/media/misaka';
+      try {
+        const catalogPath = path.join(prodDir, 'catalog.json');
+        if (fs.existsSync(prodDir) && fs.existsSync(catalogPath)) {
+          return path.resolve(prodDir);
+        }
+      } catch {
+        // In case of invalid path syntax
+      }
+      // Production Safety Invariant: NEVER fall back to /tmp in production
+      return null;
+    }
+
+    const devCandidates = [
       process.env.BOT_PERSONA_MEDIA_DIR,
       '/var/lib/uma-bot/media/misaka',
-      '/tmp/misaka_staging',
-      path.resolve(process.cwd(), 'media/misaka')
+      path.resolve(process.cwd(), 'media/misaka'),
+      '/tmp/misaka_staging'
     ].filter((dir): dir is string => typeof dir === 'string' && dir.trim().length > 0);
 
-    for (const candidate of candidates) {
+    for (const candidate of devCandidates) {
       try {
         const catalogPath = path.join(candidate, 'catalog.json');
         if (fs.existsSync(candidate) && fs.existsSync(catalogPath)) {
@@ -115,6 +131,7 @@ export class ReactionMedia {
 
     return null;
   }
+
 
 
   private loadCatalog(): void {

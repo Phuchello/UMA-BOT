@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
 import {
   ReactionMedia,
   ReactionPicker,
@@ -8,6 +10,7 @@ import {
   ReactionMood
 } from '../src/bot/persona/index.js';
 import { AttachmentBuilder } from 'discord.js';
+
 
 describe('Misaka Reaction Media & Picker Tests', () => {
   const stagingDir = '/tmp/misaka_staging';
@@ -240,6 +243,83 @@ describe('Misaka Reaction Media & Picker Tests', () => {
       const attachment = persona.reactionAttachment('electric', 'normal', { force: true });
       expect(attachment).toBeInstanceOf(AttachmentBuilder);
       expect(attachment?.name).toBe('reaction.gif');
+    });
+  });
+
+  describe('Production Safety & Persistent Media Verification', () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    it('production mode (NODE_ENV=production) NEVER falls back to /tmp/misaka_staging', () => {
+      process.env.NODE_ENV = 'production';
+      process.env.BOT_PERSONA_MEDIA_DIR = '/non/existent/production/dir';
+
+      const media = new ReactionMedia();
+      expect(media.getMediaDir()).toBeNull();
+      expect(media.getCatalog()).toEqual({});
+      expect(media.hasMood('confident')).toBe(false);
+    });
+
+    it('missing production media degrades gracefully to text-only without errors', () => {
+      process.env.NODE_ENV = 'production';
+      process.env.BOT_PERSONA_MEDIA_DIR = '/non/existent/production/dir';
+
+      const picker = new ReactionPicker(new ReactionMedia());
+      expect(picker.pick('confident', 'normal', { force: true })).toBeNull();
+      expect(picker.pick('annoyed', 'normal', { force: true })).toBeNull();
+      expect(picker.pick('victory', 'showtime', { force: true })).toBeNull();
+    });
+
+    it('validates catalog integrity against disk assets: SHA-256, magic bytes, dimensions, and size <= 8 MiB', () => {
+      const media = new ReactionMedia(stagingDir);
+      const catalog = media.getCatalog();
+      let testedGifs = 0;
+
+      for (const [, items] of Object.entries(catalog)) {
+        for (const item of items ?? []) {
+          const filePath = media.resolveFilePath(item);
+          expect(filePath).not.toBeNull();
+          expect(fs.existsSync(filePath!)).toBe(true);
+
+          const bytes = fs.readFileSync(filePath!);
+          // 1. Magic bytes
+          expect(bytes.slice(0, 6).toString('ascii')).toBe('GIF89a');
+
+          // 2. SHA-256 match
+          const hash = crypto.createHash('sha256').update(bytes).digest('hex');
+          expect(hash).toBe(item.sha256);
+
+          // 3. Discord upload limit (<= 8 MiB)
+          expect(item.size).toBeLessThanOrEqual(8 * 1024 * 1024);
+          expect(bytes.length).toBe(item.size);
+
+          // 4. Dimensions and frames
+          expect(item.width).toBeGreaterThanOrEqual(100);
+          expect(item.height).toBeGreaterThanOrEqual(100);
+          expect(item.frames).toBeGreaterThan(1);
+
+          testedGifs++;
+        }
+      }
+
+      expect(testedGifs).toBe(23);
+    });
+
+    it('serious flows strictly remain 0% GIF in production mode', () => {
+      process.env.NODE_ENV = 'production';
+      const media = new ReactionMedia(stagingDir);
+      const picker = new ReactionPicker(media, {
+        enabled: true,
+        gifsEnabled: true,
+        gifLevel: 'high'
+      });
+
+      expect(picker.pick('annoyed', 'serious', { force: true })).toBeNull();
+      expect(picker.pick('victory', 'serious', { force: true })).toBeNull();
+      expect(picker.pick('confident', 'serious', { force: true })).toBeNull();
     });
   });
 });
