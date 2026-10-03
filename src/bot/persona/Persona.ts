@@ -107,4 +107,13 @@ export class Persona {
   }
 }
 
-export const persona = Persona.get();
+export const persona: Persona = new Proxy({} as Persona, {
+  get(_target, prop, receiver) {
+    const instance = Persona.get();
+    const value = Reflect.get(instance, prop, receiver);
+    if (typeof value === 'function') {
+      return value.bind(instance);
+    }
+    return value;
+  }
+});
