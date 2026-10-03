@@ -15,7 +15,13 @@ export class MatchHandler {
     try {
       if (sub === 'start') {
         const counts = this.service.startTournament(tournamentId, interaction.user.id, staff);
-        await interaction.reply({ content: persona.messages.tournament.tournamentStarted(counts.READY, counts.WAITING), ephemeral: true });
+        const reaction = persona.reactionAttachment('hype', 'showtime');
+        const files = reaction ? [reaction] : [];
+        await interaction.reply({
+          content: persona.messages.tournament.tournamentStarted(counts.READY, counts.WAITING),
+          files,
+          ephemeral: true
+        });
       } else if (sub === 'match-referee') {
         if (!staff) throw new MatchError('NOT_STAFF', 'Chỉ Ban Tổ Chức được thực hiện thao tác này.');
         await interaction.deferReply({ ephemeral: true });
@@ -55,17 +61,29 @@ export class MatchHandler {
     try {
       if (ready) {
         const result = await this.service.confirmReady(tournamentId, matchId, interaction.channelId, interaction.user.id);
-        await interaction.editReply(result.repeated
-          ? persona.messages.match.captainAlreadyReady()
-          : result.match.status === 'READY_TO_START'
-          ? persona.messages.match.bothTeamsReady()
-          : persona.messages.match.captainReadySelf());
+        const mood = result.repeated ? 'annoyed' : (result.match.status === 'READY_TO_START' ? 'electric' : 'waiting');
+        const reaction = persona.reactionAttachment(mood, 'normal');
+        const files = reaction ? [reaction] : [];
+        await interaction.editReply({
+          content: result.repeated
+            ? persona.messages.match.captainAlreadyReady()
+            : result.match.status === 'READY_TO_START'
+            ? persona.messages.match.bothTeamsReady()
+            : persona.messages.match.captainReadySelf(),
+          files
+        });
       } else {
         const started = await this.service.startMatch(tournamentId, matchId, interaction.channelId, interaction.user.id, this.isStaff(interaction));
-        await interaction.editReply(persona.messages.match.matchStart(started.team1?.name ?? 'Đội 1', started.team2?.name ?? 'Đội 2'));
+        const reaction = persona.reactionAttachment('electric', 'normal');
+        const files = reaction ? [reaction] : [];
+        await interaction.editReply({
+          content: persona.messages.match.matchStart(started.team1?.name ?? 'Đội 1', started.team2?.name ?? 'Đội 2'),
+          files
+        });
       }
     } catch (error) { await this.respondError(interaction, error); }
   }
+
 
   private isStaff(interaction: ChatInputCommandInteraction | ButtonInteraction): boolean {
     if (!interaction.inGuild() || !interaction.member) return false;

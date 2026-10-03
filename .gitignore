@@ -33,3 +33,10 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Reaction media (must never be committed to git repository)
+media/
+data/media/
+*.gif
+*.mp4
+*.webm

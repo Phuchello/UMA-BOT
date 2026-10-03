@@ -32,9 +32,13 @@ function createEnvSchema(isTest: boolean) {
     STARTERS_COUNT: z.coerce.number().default(5),
     MAX_SUBSTITUTES: z.coerce.number().default(2),
     BOT_PERSONA_ENABLED: z.coerce.boolean().default(true),
-    BOT_PERSONA_LEVEL: z.enum(['serious', 'normal', 'showtime']).default('normal')
+    BOT_PERSONA_LEVEL: z.enum(['serious', 'normal', 'showtime']).default('normal'),
+    BOT_PERSONA_GIFS_ENABLED: z.coerce.boolean().default(true),
+    BOT_PERSONA_GIF_LEVEL: z.enum(['off', 'normal', 'high']).default('normal'),
+    BOT_PERSONA_MEDIA_DIR: z.string().default('/var/lib/uma-bot/media/misaka')
   });
 }
+
 
 export type EnvConfig = z.infer<ReturnType<typeof createEnvSchema>>;
 

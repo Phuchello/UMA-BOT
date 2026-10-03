@@ -19,7 +19,13 @@ export class TournamentHandler {
       if (command === 'checkin-open') {
         if (!this.isStaff(interaction)) return this.deny(interaction);
         const summary = this.service.openCheckin(tournamentId);
-        await interaction.reply({ content: persona.messages.checkin.openSuccess(summary.approved), ephemeral: true });
+        const reaction = persona.reactionAttachment('electric', 'normal');
+        const files = reaction ? [reaction] : [];
+        await interaction.reply({
+          content: persona.messages.checkin.openSuccess(summary.approved),
+          files,
+          ephemeral: true
+        });
       } else if (command === 'check-in') {
         const team = this.teams.getCaptainActiveTeam(tournamentId, interaction.user.id);
         if (!team) {
@@ -27,10 +33,13 @@ export class TournamentHandler {
           return;
         }
         const result = this.service.checkIn(tournamentId, team.id, interaction.user.id);
+        const reaction = persona.reactionAttachment(result.repeated ? 'annoyed' : 'confident', 'normal');
+        const files = reaction ? [reaction] : [];
         await interaction.reply({
           content: result.repeated
             ? persona.messages.checkin.alreadyCheckedIn(result.teamName)
             : persona.messages.checkin.checkinSuccess(result.teamName),
+          files,
           ephemeral: true,
           allowedMentions: { parse: [] }
         });
@@ -40,7 +49,14 @@ export class TournamentHandler {
       } else if (command === 'draw') {
         if (!this.isStaff(interaction)) return this.deny(interaction);
         const result = this.service.draw(tournamentId, interaction.user.id);
-        await interaction.reply({ embeds: [TournamentUI.drawEmbed(result)], ephemeral: true, allowedMentions: { parse: [] } });
+        const embed = TournamentUI.drawEmbed(result);
+        const reaction = persona.reactionAttachment('hype', 'showtime');
+        const files = reaction ? [reaction] : [];
+        if (reaction) {
+          embed.setImage('attachment://reaction.gif');
+        }
+        await interaction.reply({ embeds: [embed], files, ephemeral: true, allowedMentions: { parse: [] } });
+
       } else if (command === 'bracket') {
         const view = this.service.restoreBracket(tournamentId);
         if (!view) {

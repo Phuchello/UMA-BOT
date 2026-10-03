@@ -39,12 +39,16 @@ export class RegistrationHandler {
       const activeCaptainTeam = this.teamRepo.getCaptainActiveTeam(tournamentId, interaction.user.id);
 
       if (activeCaptainTeam) {
+        const reaction = persona.reactionAttachment('annoyed', 'normal');
+        const files = reaction ? [reaction] : [];
         await interaction.reply({
           content: persona.messages.registration.captainActiveExists(activeCaptainTeam.name, activeCaptainTeam.abbreviation),
+          files,
           ephemeral: true
         });
         return;
       }
+
 
       if (capacity.activeCount >= capacity.maxTeams) {
         await interaction.reply({
@@ -219,6 +223,8 @@ export class RegistrationHandler {
         console.error('Failed to post to BTC review channel:', err);
       }
 
+      const reaction = persona.reactionAttachment('confident', 'normal');
+      const files = reaction ? [reaction] : [];
       await interaction.reply({
         content: persona.messages.registration.registrationSuccess(
           team.name,
@@ -226,10 +232,12 @@ export class RegistrationHandler {
           5,
           (team.players || []).filter(p => p.isSubstitute).length
         ),
+        files,
         ephemeral: true
       });
       return;
     }
+
 
     // 2. Captain Resubmission of Corrected Team
     if (customId.startsWith('modal_edit_team_')) {
@@ -408,15 +416,22 @@ export class RegistrationHandler {
         }
 
         const embed = RegistrationUI.createMyTeamEmbed(team);
+        const reaction = persona.reactionAttachment('confident', 'normal');
+        const files = reaction ? [reaction] : [];
+        if (reaction) {
+          embed.setThumbnail('attachment://reaction.gif');
+        }
         const buttons = RegistrationUI.createMyTeamButtons(team, this.teamRepo.getTournament(tournamentId)?.status);
 
         await interaction.reply({
           embeds: [embed],
+          files,
           components: buttons ? [buttons] : [],
           ephemeral: true
         });
         return;
       }
+
 
       if (subcommand === 'status') {
         const capacity = getTournamentCapacity(this.teamRepo, tournamentId);

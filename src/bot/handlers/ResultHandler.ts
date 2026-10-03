@@ -24,7 +24,12 @@ export class ResultHandler {
         await this.service.submit(tournamentId, interaction.channelId, interaction.user.id,
           myScore, oppScore,
           { url: attachment.url, filename: attachment.name, contentType: attachment.contentType, size: attachment.size });
-        await interaction.editReply(persona.messages.result.reported(`${myScore}–${oppScore}`));
+        const reaction = persona.reactionAttachment('checking', 'normal');
+        const files = reaction ? [reaction] : [];
+        await interaction.editReply({
+          content: persona.messages.result.reported(`${myScore}–${oppScore}`),
+          files
+        });
       } else if (sub === 'result-resolve') {
         await this.service.resolve(tournamentId, interaction.channelId, interaction.user.id, this.isStaff(interaction),
           interaction.options.getInteger('team1-score', true), interaction.options.getInteger('team2-score', true),
@@ -49,14 +54,24 @@ export class ResultHandler {
       const tournamentId = getConfig().ACTIVE_TOURNAMENT_ID;
       if (action === 'confirm') {
         await this.service.confirm(tournamentId, interaction.channelId, submissionId, interaction.user.id);
-        await interaction.editReply(persona.messages.result.opponentConfirmed());
+        const reaction = persona.reactionAttachment('confident', 'normal');
+        const files = reaction ? [reaction] : [];
+        await interaction.editReply({
+          content: persona.messages.result.opponentConfirmed(),
+          files
+        });
       } else {
         const approved = await this.service.approve(tournamentId, interaction.channelId, submissionId, interaction.user.id, this.isStaff(interaction));
         const matchRecord = this.matches.byId(tournamentId, approved.matchId);
         const winnerName = matchRecord?.team1?.id === approved.winnerTeamId
           ? matchRecord.team1.name
           : matchRecord?.team2?.name ?? 'Chiến thắng';
-        await interaction.editReply(persona.messages.result.refereeApproved(winnerName, `${approved.team1Score}–${approved.team2Score}`));
+        const reaction = persona.reactionAttachment('victory', 'normal');
+        const files = reaction ? [reaction] : [];
+        await interaction.editReply({
+          content: persona.messages.result.refereeApproved(winnerName, `${approved.team1Score}–${approved.team2Score}`),
+          files
+        });
       }
     } catch (error) { await this.respondError(interaction, error); }
   }
