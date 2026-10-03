@@ -4,6 +4,7 @@ import { ResultRepository, type CanonicalResult } from '../result/ResultReposito
 import { StreamRepository } from '../stream/StreamRepository.js';
 import { PublicationRepository, type PublishedMessage } from './PublicationRepository.js';
 import type { PublicAnnouncementGateway, PublicCard } from './PublicAnnouncementGateway.js';
+import { persona } from '../bot/persona/index.js';
 
 export class PublicationError extends Error {
   constructor(public readonly code: string, message: string) { super(message); }
@@ -69,17 +70,21 @@ export class PublicationService {
     const fields = [{ name: '🏅 Chiến thắng', value: safe(winner) },
       { name: 'Xác nhận', value: '✅ Đã được trọng tài/BTC xác nhận' }];
     if (streamUrl) fields.push({ name: '📺 Xem lại trận', value: 'Nhấn tiêu đề để mở livestream/VOD.' });
-    return { title: '🏆 UMA CUP — KẾT QUẢ CHÍNH THỨC',
+    return { title: '🏆 UMA CUP — KẾT QUẢ CHÍNH THỨC ⚡',
       description: `Vòng ${match.round} • Trận ${match.number}\n\n${safe(match.team1!.name)} **${result.team1Score} — ${result.team2Score}** ${safe(match.team2!.name)}`,
-      fields, footer: `UMA CUP • Kết quả chính thức${result.revision > 1 ? ` • Hiệu chỉnh #${result.revision - 1}` : ''}`,
+      fields, footer: persona.footer(`Kết quả chính thức${result.revision > 1 ? ` • Hiệu chỉnh #${result.revision - 1}` : ''}`),
       color: 0x22C55E, url: streamUrl ?? undefined };
   }
   private championCard(final: MatchRecord, result: CanonicalResult): PublicCard {
     const champion = result.winnerTeamId === final.team1!.id ? final.team1!.name : final.team2!.name;
     const runner = result.loserTeamId === final.team1!.id ? final.team1!.name : final.team2!.name;
-    return { title: '🏆 UMA CUP — NHÀ VÔ ĐỊCH',
-      description: `🥇 ${safe(champion)}\n🥈 ${safe(runner)}\n\nChung kết: ${safe(final.team1!.name)} ${result.team1Score}–${result.team2Score} ${safe(final.team2!.name)}\n\n🎉 Chúc mừng nhà vô địch UMA CUP!`,
-      fields: [], footer: 'UMA CUP • Lễ trao giải', color: 0xF59E0B };
+    return {
+      title: persona.messages.result.championCardTitle,
+      description: persona.messages.result.championCardDescription(safe(champion), safe(runner), `${result.team1Score}–${result.team2Score}`),
+      fields: [],
+      footer: persona.arenaFooter('Lễ trao giải UMA CUP'),
+      color: 0xF59E0B
+    };
   }
   private async publishOne(kind: 'result' | 'champion', tournamentId: string, matchId: string | null,
     revision: number, card: PublicCard, existing: PublishedMessage | null): Promise<'created' | 'updated' | 'unchanged'> {

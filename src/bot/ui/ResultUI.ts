@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import type { MatchRecord } from '../../match/MatchRepository.js';
 import type { ResultSubmission } from '../../result/ResultRepository.js';
+import { persona } from '../persona/index.js';
 
 const safe = (value: string) => value.slice(0, 80).replace(/[\r\n]/g, ' ').replace(/@/g, '@\u200b').replace(/[`*_~|]/g, '\\$&');
 const status: Record<ResultSubmission['status'], string> = {
@@ -13,13 +14,14 @@ export class ResultUI {
     const score1 = submission.status === 'APPROVED' ? match.result?.team1Score ?? submission.team1Score : submission.team1Score;
     const score2 = submission.status === 'APPROVED' ? match.result?.team2Score ?? submission.team2Score : submission.team2Score;
     const embed = new EmbedBuilder().setColor(submission.status === 'APPROVED' ? 0x22C55E : 0xF59E0B)
-      .setTitle(`📸 UMA CUP — BÁO KẾT QUẢ R${match.round}-M${match.number}`)
+      .setTitle(`📸 UMA CUP — BÁO KẾT QUẢ R${match.round}-M${match.number} ⚡`)
       .setDescription(`${safe(match.team1?.name ?? '?')} **${score1} — ${score2}** ${safe(match.team2?.name ?? '?')}`)
       .addFields(
         { name: 'Người báo', value: `<@${submission.reporterId}>` },
         { name: 'Bằng chứng', value: 'Screenshot đã lưu trong phòng trận' },
         { name: 'Trạng thái', value: status[submission.status] }
-      );
+      )
+      .setFooter({ text: persona.arenaFooter('Xác nhận kết quả UMA CUP') });
     if (submission.status === 'APPROVED' && match.result) {
       const winner = match.result.winnerTeamId === match.team1?.id ? match.team1.name : match.team2?.name ?? '?';
       embed.addFields({ name: 'Đội thắng', value: safe(winner) }, { name: 'Duyệt bởi', value: `<@${match.result.approvedBy}>` });
@@ -56,6 +58,7 @@ export class ResultUI {
       .setDescription(matches.filter(match => match.round === round).map(match =>
         `**R${match.round}-M${match.number}** — ${match.result
           ? `${safe(match.team1?.name ?? '?')} ${match.result.team1Score}–${match.result.team2Score} ${safe(match.team2?.name ?? '?')} ✅ Đã xác nhận`
-          : 'Chưa hoàn tất'}`).join('\n')));
+          : 'Chưa hoàn tất'}`).join('\n'))
+      .setFooter({ text: persona.footer('Bảng kết quả UMA CUP') }));
   }
 }

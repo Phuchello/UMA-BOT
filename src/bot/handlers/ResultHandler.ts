@@ -3,6 +3,7 @@ import { getConfig, isStaffMember } from '../../config/env.js';
 import { ResultError, ResultService } from '../../result/ResultService.js';
 import { MatchRepository } from '../../match/MatchRepository.js';
 import { ResultUI } from '../ui/ResultUI.js';
+import { persona } from '../persona/index.js';
 
 type ResultInteraction = ChatInputCommandInteraction | ButtonInteraction | ModalSubmitInteraction;
 export class ResultHandler {
@@ -18,18 +19,20 @@ export class ResultHandler {
       await interaction.deferReply({ ephemeral: true });
       if (sub === 'report-result') {
         const attachment = interaction.options.getAttachment('evidence', true);
+        const myScore = interaction.options.getInteger('my-score', true);
+        const oppScore = interaction.options.getInteger('opponent-score', true);
         await this.service.submit(tournamentId, interaction.channelId, interaction.user.id,
-          interaction.options.getInteger('my-score', true), interaction.options.getInteger('opponent-score', true),
+          myScore, oppScore,
           { url: attachment.url, filename: attachment.name, contentType: attachment.contentType, size: attachment.size });
-        await interaction.editReply('📸 Đã lưu ảnh và báo cáo. Chờ đối thủ và trọng tài xử lý.');
+        await interaction.editReply(persona.messages.result.reported(`${myScore}–${oppScore}`));
       } else if (sub === 'result-resolve') {
         await this.service.resolve(tournamentId, interaction.channelId, interaction.user.id, this.isStaff(interaction),
           interaction.options.getInteger('team1-score', true), interaction.options.getInteger('team2-score', true),
           interaction.options.getString('reason', true));
-        await interaction.editReply('✅ Đã xử lý tranh chấp và cập nhật nhánh đấu.');
+        await interaction.editReply(persona.messages.result.disputeResolved());
       } else if (sub === 'result-refresh') {
         await this.service.refresh(tournamentId, interaction.channelId, interaction.user.id, this.isStaff(interaction));
-        await interaction.editReply('🔄 Đã cập nhật thẻ kết quả và thẻ trận từ dữ liệu đã lưu.');
+        await interaction.editReply(persona.messages.result.refreshed());
       }
     } catch (error) { await this.respondError(interaction, error); }
   }
@@ -46,10 +49,14 @@ export class ResultHandler {
       const tournamentId = getConfig().ACTIVE_TOURNAMENT_ID;
       if (action === 'confirm') {
         await this.service.confirm(tournamentId, interaction.channelId, submissionId, interaction.user.id);
-        await interaction.editReply('✅ Đã đồng ý. Trọng tài vẫn cần duyệt kết quả.');
+        await interaction.editReply(persona.messages.result.opponentConfirmed());
       } else {
-        await this.service.approve(tournamentId, interaction.channelId, submissionId, interaction.user.id, this.isStaff(interaction));
-        await interaction.editReply('✅ Kết quả đã được duyệt và nhánh đấu đã cập nhật.');
+        const approved = await this.service.approve(tournamentId, interaction.channelId, submissionId, interaction.user.id, this.isStaff(interaction));
+        const matchRecord = this.matches.byId(tournamentId, approved.matchId);
+        const winnerName = matchRecord?.team1?.id === approved.winnerTeamId
+          ? matchRecord.team1.name
+          : matchRecord?.team2?.name ?? 'Chiến thắng';
+        await interaction.editReply(persona.messages.result.refereeApproved(winnerName, `${approved.team1Score}–${approved.team2Score}`));
       }
     } catch (error) { await this.respondError(interaction, error); }
   }
@@ -64,10 +71,10 @@ export class ResultHandler {
       if (!interaction.channelId) throw new ResultError('WRONG_ROOM', 'Không tìm thấy phòng trận.');
       if (action === 'dispute') {
         await this.service.dispute(tournamentId, interaction.channelId, submissionId, interaction.user.id, reason);
-        await interaction.editReply('⚠️ Đã ghi nhận khiếu nại. Chờ trọng tài xử lý.');
+        await interaction.editReply(persona.messages.result.disputeRecorded());
       } else {
         await this.service.reject(tournamentId, interaction.channelId, submissionId, interaction.user.id, this.isStaff(interaction), reason);
-        await interaction.editReply('❌ Đã yêu cầu báo lại. Trận vẫn LIVE.');
+        await interaction.editReply(persona.messages.result.refereeRejected(reason));
       }
     } catch (error) { await this.respondError(interaction, error); }
   }
@@ -78,7 +85,9 @@ export class ResultHandler {
   }
   private async respondError(interaction: ResultInteraction, error: unknown): Promise<void> {
     if (!(error instanceof ResultError)) console.error('Result interaction failed:', error);
-    const content = error instanceof ResultError ? `⚠️ ${error.message}` : '⚠️ Không thể xử lý kết quả lúc này. Hãy báo BTC kiểm tra phòng trận.';
+    const content = error instanceof ResultError
+      ? persona.messages.errors.domainError(error.code, error.message)
+      : persona.messages.errors.unhandledError();
     if (interaction.deferred) await interaction.editReply(content);
     else await interaction.reply({ content, ephemeral: true });
   }

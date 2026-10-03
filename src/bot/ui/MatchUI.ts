@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import type { MatchRecord, MatchState } from '../../match/MatchRepository.js';
+import { persona } from '../persona/index.js';
 
 const safe = (value: string) => value.slice(0, 48).replace(/[\r\n]/g, ' ').replace(/@/g, '@\u200b')
   .replace(/[`*_~|]/g, '\\$&');
@@ -19,7 +20,7 @@ export class MatchUI {
       : `<t:${Math.floor(match.scheduledAt / 1000)}:F> • <t:${Math.floor(match.scheduledAt / 1000)}:R>`;
     const ready = (side: MatchRecord['team1']) => side && match.readyTeamIds.includes(side.id) ? '✅ Sẵn sàng' : '⏳ Chưa xác nhận';
     const embed = new EmbedBuilder().setColor(match.status === 'COMPLETED' ? 0x22C55E : match.status === 'LIVE' ? 0xEF4444 : 0x2563EB)
-      .setTitle(`⚔️ UMA CUP — ${label(match)}`)
+      .setTitle(`⚔️ UMA CUP — ${label(match)} ⚡`)
       .addFields(
         { name: 'Team A', value: team(match.team1), inline: true },
         { name: 'Team B', value: team(match.team2), inline: true },
@@ -31,7 +32,7 @@ export class MatchUI {
         { name: 'Readiness', value: `Team A: ${ready(match.team1)}\nTeam B: ${ready(match.team2)}` },
         { name: 'State', value: stateLabel[match.status] }
       )
-      .setFooter({ text: match.status === 'LIVE' ? 'Dùng /uma report-result và đính kèm ảnh kết quả.' : 'UMA CUP • Match room' });
+      .setFooter({ text: match.status === 'LIVE' ? persona.footer('Dùng /uma report-result và đính kèm ảnh kết quả') : persona.arenaFooter(`Match room • ${label(match)}`) });
     if (match.result) {
       const winner = match.result.winnerTeamId === match.team1?.id ? match.team1.name : match.team2?.name ?? '?';
       embed.addFields({ name: 'Kết quả chính thức', value: `${match.result.team1Score}–${match.result.team2Score} • Thắng: ${safe(winner)}` });
@@ -63,7 +64,8 @@ export class MatchUI {
         return `**${label(match)}** — ${left}${score} ${match.result ? '' : 'vs '}${right}\n${stateLabel[match.status]}${time}${stream}`;
       });
       return new EmbedBuilder().setColor(0x3B82F6).setTitle(`⚔️ UMA CUP — Vòng ${round}`)
-        .setDescription(lines.join('\n') || 'Chưa có trận.');
+        .setDescription(lines.join('\n') || 'Chưa có trận.')
+        .setFooter({ text: persona.footer(`Lịch thi đấu Vòng ${round}`) });
     });
   }
 

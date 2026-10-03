@@ -28,6 +28,7 @@ import { ProductionReadinessService } from '../operations/ProductionReadinessSer
 import { DiscordResourceProbe } from './DiscordResourceProbe.js';
 import { OperationsHandler } from './handlers/OperationsHandler.js';
 import { getConfig } from '../config/env.js';
+import { persona } from './persona/index.js';
 
 export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: TeamRepository; matchService: MatchService; resultService: ResultService; publicationService: PublicationService; streamService: StreamService } {
   const client = new Client({
@@ -91,7 +92,7 @@ export function createBotClient(db: DatabaseSync): { client: Client; teamRepo: T
       console.error('Error handling interaction:', err);
       if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          content: '⚠️ Đã xảy ra lỗi trong quá trình xử lý yêu cầu. Vui lòng thử lại sau hoặc báo cho BTC.',
+          content: persona.messages.errors.unhandledError(),
           ephemeral: true
         }).catch(() => {});
       }
