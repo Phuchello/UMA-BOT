@@ -6,6 +6,7 @@ import { TournamentUI } from '../ui/TournamentUI.js';
 import type { MatchService } from '../../match/MatchService.js';
 import { MatchUI } from '../ui/MatchUI.js';
 import type { ResultService } from '../../result/ResultService.js';
+import { persona } from '../persona/index.js';
 
 export class TournamentHandler {
   constructor(private readonly service: TournamentService, private readonly teams: TeamRepository,
@@ -18,28 +19,48 @@ export class TournamentHandler {
       if (command === 'checkin-open') {
         if (!this.isStaff(interaction)) return this.deny(interaction);
         const summary = this.service.openCheckin(tournamentId);
-        await interaction.reply({ content: `🔒 Đã khóa đăng ký và mở check-in. **${summary.approved} đội đã duyệt** có thể điểm danh bằng \`/uma check-in\`.`, ephemeral: true });
+        const reaction = persona.reactionAttachment('electric', 'normal');
+        const files = reaction ? [reaction] : [];
+        await interaction.reply({
+          content: persona.messages.checkin.openSuccess(summary.approved),
+          files,
+          ephemeral: true
+        });
       } else if (command === 'check-in') {
         const team = this.teams.getCaptainActiveTeam(tournamentId, interaction.user.id);
         if (!team) {
-          await interaction.reply({ content: '⚠️ Bạn chưa có đội đang hoạt động trong giải đấu này.', ephemeral: true });
+          await interaction.reply({ content: persona.messages.checkin.noActiveTeam(), ephemeral: true });
           return;
         }
         const result = this.service.checkIn(tournamentId, team.id, interaction.user.id);
-        await interaction.reply({ content: result.repeated
-          ? `ℹ️ Đội ${result.teamName} đã check-in trước đó.`
-          : `✅ Đội ${result.teamName} đã check-in thành công.`, ephemeral: true, allowedMentions: { parse: [] } });
+        const reaction = persona.reactionAttachment(result.repeated ? 'annoyed' : 'confident', 'normal');
+        const files = reaction ? [reaction] : [];
+        await interaction.reply({
+          content: result.repeated
+            ? persona.messages.checkin.alreadyCheckedIn(result.teamName)
+            : persona.messages.checkin.checkinSuccess(result.teamName),
+          files,
+          ephemeral: true,
+          allowedMentions: { parse: [] }
+        });
       } else if (command === 'checkins') {
         const view = this.service.checkinView(tournamentId);
         await interaction.reply({ embeds: [TournamentUI.checkinsEmbed(view, view.checkedInNames, view.missingNames)], allowedMentions: { parse: [] } });
       } else if (command === 'draw') {
         if (!this.isStaff(interaction)) return this.deny(interaction);
         const result = this.service.draw(tournamentId, interaction.user.id);
-        await interaction.reply({ embeds: [TournamentUI.drawEmbed(result)], ephemeral: true, allowedMentions: { parse: [] } });
+        const embed = TournamentUI.drawEmbed(result);
+        const reaction = persona.reactionAttachment('hype', 'showtime');
+        const files = reaction ? [reaction] : [];
+        if (reaction) {
+          embed.setImage('attachment://reaction.gif');
+        }
+        await interaction.reply({ embeds: [embed], files, ephemeral: true, allowedMentions: { parse: [] } });
+
       } else if (command === 'bracket') {
         const view = this.service.restoreBracket(tournamentId);
         if (!view) {
-          await interaction.reply({ content: 'Bracket chưa được bốc thăm.' });
+          await interaction.reply({ content: persona.messages.tournament.bracketNotDrawn() });
           return;
         }
         await interaction.reply({ embeds: TournamentUI.bracketEmbeds(view), allowedMentions: { parse: [] } });
@@ -56,7 +77,7 @@ export class TournamentHandler {
       }
     } catch (error) {
       if (error instanceof TournamentError) {
-        await interaction.reply({ content: `⚠️ ${error.message}`, ephemeral: true });
+        await interaction.reply({ content: persona.messages.errors.domainError(error.name, error.message), ephemeral: true });
         return;
       }
       throw error;
@@ -70,6 +91,6 @@ export class TournamentHandler {
   }
 
   private async deny(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.reply({ content: '⛔ Chỉ Ban Tổ Chức được thực hiện thao tác này.', ephemeral: true });
+    await interaction.reply({ content: persona.messages.errors.permissionDenied('Ban Tổ Chức'), ephemeral: true });
   }
 }

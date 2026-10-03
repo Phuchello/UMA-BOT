@@ -1,6 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import type { BracketView, DrawResult } from '../../tournament/TournamentService.js';
 import type { TournamentSummary } from '../../tournament/TournamentRepository.js';
+import { persona } from '../persona/index.js';
 
 const phaseLabel: Record<string, string> = {
   registration_open: 'Đang mở đăng ký',
@@ -34,21 +35,29 @@ export class TournamentUI {
       '', '**Đã check-in:**', checkedInNames.length ? checkedInNames.map(safeName).join(', ') : '*Chưa có đội nào*',
       '', '**Chưa check-in:**', missingNames.length ? missingNames.map(safeName).join(', ') : '*Không có*'
     ];
-    return new EmbedBuilder().setColor(0xEAB308).setTitle('✅ UMA CUP — ĐIỂM DANH ĐỘI').setDescription(lines.join('\n'));
+    return new EmbedBuilder()
+      .setColor(0xEAB308)
+      .setTitle('✅ UMA CUP — ĐIỂM DANH ĐỘI ⚡')
+      .setDescription(lines.join('\n'))
+      .setFooter({ text: persona.footer('Điểm danh thi đấu UMA CUP') });
   }
 
   public static drawEmbed(draw: DrawResult): EmbedBuilder {
     const order = draw.seeds.map(seed => `#${seed.seed} — ${safeName(seed.name)}`).join('\n');
-    return new EmbedBuilder().setColor(0x22C55E).setTitle('🎲 BỐC THĂM THÀNH CÔNG')
-      .setDescription(`**Đội hợp lệ:** ${draw.eligibleCount}\n**Số vòng:** ${draw.bracket.totalRounds}\n**BYE:** ${draw.byes.length}\n**Nhánh đấu:** Đã lưu thành công\n\n**Thứ tự hạt giống ngẫu nhiên:**\n${order}`);
+    return new EmbedBuilder()
+      .setColor(0x22C55E)
+      .setTitle('🎲 BỐC THĂM THÀNH CÔNG ⚡')
+      .setDescription(`**Đội hợp lệ:** ${draw.eligibleCount}\n**Số vòng:** ${draw.bracket.totalRounds}\n**BYE:** ${draw.byes.length}\n**Nhánh đấu:** Đã lưu thành công\n\n**Thứ tự hạt giống ngẫu nhiên:**\n${order}`)
+      .setFooter({ text: persona.arenaFooter('Bốc thăm nhánh đấu hoàn tất') });
   }
 
   public static bracketEmbeds(view: BracketView): EmbedBuilder[] {
     const { bracket, seeds, byes } = view;
     const seedName = new Map(seeds.map(seed => [seed.teamId, safeName(seed.name)]));
     const embeds: EmbedBuilder[] = [new EmbedBuilder().setColor(0x3B82F6)
-      .setTitle('🏆 UMA CUP — NHÁNH ĐẤU')
-      .setDescription(`**Số đội:** ${seeds.length}\n**Thể thức:** Single Elimination\n**Tổng số vòng:** ${bracket.totalRounds}\n**BYE:** ${byes.length}`)];
+      .setTitle('🏆 UMA CUP — NHÁNH ĐẤU ⚡')
+      .setDescription(`**Số đội:** ${seeds.length}\n**Thể thức:** Single Elimination\n**Tổng số vòng:** ${bracket.totalRounds}\n**BYE:** ${byes.length}`)
+      .setFooter({ text: persona.arenaFooter('Nhánh đấu chính thức') })];
     for (let round = 1; round <= bracket.totalRounds; round++) {
       const lines = bracket.matches.filter(match => match.round === round)
         .sort((a, b) => a.matchNumber - b.matchNumber)
@@ -61,7 +70,8 @@ export class TournamentUI {
         byes.forEach((bye, index) => lines.push(`BYE ${index + 1} — ${seedName.get(bye.teamId)} → Vòng 2`));
       }
       embeds.push(new EmbedBuilder().setColor(0x64748B).setTitle(`Vòng ${round}`)
-        .setDescription(lines.join('\n') || '*Chưa có trận đấu*'));
+        .setDescription(lines.join('\n') || '*Chưa có trận đấu*')
+        .setFooter({ text: persona.footer(`Vòng ${round}`) }));
     }
     return embeds;
   }

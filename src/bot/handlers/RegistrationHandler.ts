@@ -11,6 +11,7 @@ import { getTournamentCapacity } from '../../registration/TournamentCapacity.js'
 import { RegistrationParser } from '../../registration/RegistrationParser.js';
 import { RegistrationUI } from '../ui/RegistrationUI.js';
 import { getConfig, isStaffMember } from '../../config/env.js';
+import { persona } from '../persona/index.js';
 
 export class RegistrationHandler {
   constructor(
@@ -27,27 +28,31 @@ export class RegistrationHandler {
     if (customId === 'btn_register_team') {
       const capacity = getTournamentCapacity(this.teamRepo, tournamentId);
       if (!capacity) {
-        await interaction.reply({ content: '❌ Giải đấu đang hoạt động chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.', ephemeral: true });
+        await interaction.reply({ content: persona.messages.registration.tournamentUninitialized(), ephemeral: true });
         return;
       }
       if (this.teamRepo.getTournament(tournamentId)?.status !== 'registration_open') {
-        await interaction.reply({ content: '🔒 Đăng ký đã khóa.', ephemeral: true });
+        await interaction.reply({ content: persona.messages.registration.registrationClosed(), ephemeral: true });
         return;
       }
 
       const activeCaptainTeam = this.teamRepo.getCaptainActiveTeam(tournamentId, interaction.user.id);
 
       if (activeCaptainTeam) {
+        const reaction = persona.reactionAttachment('annoyed', 'normal');
+        const files = reaction ? [reaction] : [];
         await interaction.reply({
-          content: `⚠️ Bạn đã là đội trưởng của đội **${activeCaptainTeam.name}** [${activeCaptainTeam.abbreviation}]. Mỗi đội trưởng chỉ được quản lý 1 đội đang hoạt động trong giải đấu.`,
+          content: persona.messages.registration.captainActiveExists(activeCaptainTeam.name, activeCaptainTeam.abbreviation),
+          files,
           ephemeral: true
         });
         return;
       }
 
+
       if (capacity.activeCount >= capacity.maxTeams) {
         await interaction.reply({
-          content: `⚠️ Giải đấu hiện đã đủ số lượng đội đăng ký (${capacity.activeCount}/${capacity.maxTeams} đội). Vui lòng theo dõi các thông báo tiếp theo từ Ban Tổ Chức!`,
+          content: persona.messages.registration.capacityFull(capacity.activeCount, capacity.maxTeams),
           ephemeral: true
         });
         return;
@@ -76,30 +81,30 @@ export class RegistrationHandler {
     // 4. Edit Corrected Team Button (Captain action)
     if (customId.startsWith('btn_edit_team_')) {
       if (this.teamRepo.getTournament(tournamentId)?.status !== 'registration_open') {
-        await interaction.reply({ content: '🔒 Giai đoạn chỉnh sửa đơn đã kết thúc.', ephemeral: true });
+        await interaction.reply({ content: persona.messages.registration.editPhaseClosed(), ephemeral: true });
         return;
       }
       const teamId = customId.replace('btn_edit_team_', '');
       const team = this.teamRepo.getTeam(teamId);
 
       if (!team) {
-        await interaction.reply({ content: '❌ Đội không tồn tại trong hệ thống.', ephemeral: true });
+        await interaction.reply({ content: persona.messages.registration.teamNotFound(), ephemeral: true });
         return;
       }
 
       if (team.tournamentId !== tournamentId) {
-        await interaction.reply({ content: '❌ Đội không thuộc giải đấu đang hoạt động.', ephemeral: true });
+        await interaction.reply({ content: persona.messages.registration.teamNotInActiveTournament(), ephemeral: true });
         return;
       }
 
       if (team.captainDiscordId !== interaction.user.id) {
-        await interaction.reply({ content: '⛔ Bạn không phải là đội trưởng của đội này.', ephemeral: true });
+        await interaction.reply({ content: persona.messages.registration.notCaptain(), ephemeral: true });
         return;
       }
 
       if (team.status !== 'NEEDS_CORRECTION') {
         await interaction.reply({
-          content: `⚠️ Đơn này hiện không ở trạng thái yêu cầu chỉnh sửa (Trạng thái hiện tại: ${team.status}).`,
+          content: persona.messages.registration.notInCorrectionState(team.status),
           ephemeral: true
         });
         return;
@@ -113,7 +118,7 @@ export class RegistrationHandler {
     if (customId.startsWith('btc_')) {
       if (!this.checkStaffPermission(interaction)) {
         await interaction.reply({
-          content: '⛔ Bạn không có quyền thực hiện thao tác này của Ban Tổ Chức.',
+          content: persona.messages.errors.permissionDenied('Ban Tổ Chức'),
           ephemeral: true
         });
         return;
@@ -140,7 +145,7 @@ export class RegistrationHandler {
         try {
           const captainUser = await this.client.users.fetch(team.captainDiscordId);
           await captainUser.send({
-            content: `🎉 **CHÚC MỪNG!** Đơn đăng ký của đội **${team.name}** [${team.abbreviation}] đã được Ban Tổ Chức UMA CUP chính thức phê duyệt!`
+            content: persona.messages.btc.approvedDm(team.name, team.abbreviation)
           });
         } catch {
           // Ignore DM block
@@ -176,7 +181,7 @@ export class RegistrationHandler {
       const parseResult = RegistrationParser.parseRoster(startersRaw, subsRaw, config.MAX_SUBSTITUTES);
       if (!parseResult.success) {
         await interaction.reply({
-          content: `❌ **Đăng ký không hợp lệ:**\n${parseResult.error}`,
+          content: persona.messages.registration.invalidRoster(parseResult.error),
           ephemeral: true
         });
         return;
@@ -218,17 +223,21 @@ export class RegistrationHandler {
         console.error('Failed to post to BTC review channel:', err);
       }
 
+      const reaction = persona.reactionAttachment('confident', 'normal');
+      const files = reaction ? [reaction] : [];
       await interaction.reply({
-        content:
-          `✅ **ĐƠN ĐĂNG KÝ THÀNH CÔNG!**\n\n` +
-          `• **Đội tuyển:** **${team.name}** [${team.abbreviation}]\n` +
-          `• **Thành viên chính thức:** 5/5 đã ghi nhận\n` +
-          `• **Dự bị:** ${(team.players || []).filter(p => p.isSubstitute).length} thành viên\n\n` +
-          `Đơn của bạn đã được chuyển tới Ban Tổ Chức tại kênh điều hành. Vui lòng theo dõi thông báo!`,
+        content: persona.messages.registration.registrationSuccess(
+          team.name,
+          team.abbreviation,
+          5,
+          (team.players || []).filter(p => p.isSubstitute).length
+        ),
+        files,
         ephemeral: true
       });
       return;
     }
+
 
     // 2. Captain Resubmission of Corrected Team
     if (customId.startsWith('modal_edit_team_')) {
@@ -242,7 +251,7 @@ export class RegistrationHandler {
       const parseResult = RegistrationParser.parseRoster(startersRaw, subsRaw, config.MAX_SUBSTITUTES);
       if (!parseResult.success) {
         await interaction.reply({
-          content: `❌ **Thông tin chỉnh sửa không hợp lệ:**\n${parseResult.error}`,
+          content: persona.messages.registration.invalidRoster(parseResult.error),
           ephemeral: true
         });
         return;
@@ -299,10 +308,7 @@ export class RegistrationHandler {
       }
 
       await interaction.reply({
-        content:
-          `✅ **NỘP LẠI ĐƠN THÀNH CÔNG!**\n\n` +
-          `Đơn đăng ký chỉnh sửa của đội **${updatedTeam.name}** [${updatedTeam.abbreviation}] đã được chuyển lại cho Ban Tổ Chức xét duyệt.\n` +
-          `Bạn có thể kiểm tra trạng thái bất kỳ lúc nào qua lệnh \`/uma my-team\`.`,
+        content: persona.messages.registration.resubmitSuccess(updatedTeam.name, updatedTeam.abbreviation),
         ephemeral: true
       });
       return;
@@ -312,7 +318,7 @@ export class RegistrationHandler {
     if (customId.startsWith('modal_correction_') || customId.startsWith('modal_reject_')) {
       if (!this.checkStaffPermission(interaction)) {
         await interaction.reply({
-          content: '⛔ Bạn không có quyền thực hiện thao tác này của Ban Tổ Chức.',
+          content: persona.messages.errors.permissionDenied('Ban Tổ Chức'),
           ephemeral: true
         });
         return;
@@ -345,8 +351,8 @@ export class RegistrationHandler {
       try {
         const captainUser = await this.client.users.fetch(team.captainDiscordId);
         const actionMsg = isCorrection
-          ? `⚠️ **YÊU CẦU CHỈNH SỬA:** Đơn đăng ký của đội **${team.name}** cần chỉnh sửa với lý do: "${reason}".\nVui lòng dùng lệnh \`/uma my-team\` để mở đơn và chỉnh sửa lại thông tin.`
-          : `🔴 **TỪ CHỐI ĐƠN:** Đơn đăng ký của đội **${team.name}** đã bị từ chối với lý do: "${reason}".`;
+          ? persona.messages.btc.correctionDm(team.name, reason)
+          : persona.messages.btc.rejectedDm(team.name, reason);
         await captainUser.send({ content: actionMsg });
       } catch {
         // Ignore DM block
@@ -366,7 +372,7 @@ export class RegistrationHandler {
       if (subcommand === 'panel') {
         if (!this.checkStaffPermission(interaction)) {
           await interaction.reply({
-            content: '⛔ Chỉ Ban Tổ Chức hoặc Quản trị viên mới được xuất bảng đăng ký.',
+            content: persona.messages.errors.permissionDenied('Chỉ Ban Tổ Chức hoặc Quản trị viên mới được xuất bảng đăng ký.'),
             ephemeral: true
           });
           return;
@@ -374,7 +380,7 @@ export class RegistrationHandler {
 
         const capacity = getTournamentCapacity(this.teamRepo, tournamentId);
         if (!capacity) {
-          await interaction.reply({ content: '❌ Giải đấu đang hoạt động chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.', ephemeral: true });
+          await interaction.reply({ content: persona.messages.registration.tournamentUninitialized(), ephemeral: true });
           return;
         }
 
@@ -403,27 +409,34 @@ export class RegistrationHandler {
         const team = this.teamRepo.getCaptainActiveTeam(tournamentId, interaction.user.id);
         if (!team) {
           await interaction.reply({
-            content: `⚠️ Bạn chưa đăng ký đội nào trong giải đấu hiện tại (${tournamentId}). Hãy bấm nút "📝 Đăng ký đội" tại kênh thông báo để tham gia!`,
+            content: persona.messages.registration.myTeamEmpty(tournamentId),
             ephemeral: true
           });
           return;
         }
 
         const embed = RegistrationUI.createMyTeamEmbed(team);
+        const reaction = persona.reactionAttachment('confident', 'normal');
+        const files = reaction ? [reaction] : [];
+        if (reaction) {
+          embed.setThumbnail('attachment://reaction.gif');
+        }
         const buttons = RegistrationUI.createMyTeamButtons(team, this.teamRepo.getTournament(tournamentId)?.status);
 
         await interaction.reply({
           embeds: [embed],
+          files,
           components: buttons ? [buttons] : [],
           ephemeral: true
         });
         return;
       }
 
+
       if (subcommand === 'status') {
         const capacity = getTournamentCapacity(this.teamRepo, tournamentId);
         if (!capacity) {
-          await interaction.reply({ content: '❌ Giải đấu đang hoạt động chưa được khởi tạo. Vui lòng liên hệ Ban Tổ Chức.', ephemeral: true });
+          await interaction.reply({ content: persona.messages.registration.tournamentUninitialized(), ephemeral: true });
           return;
         }
 

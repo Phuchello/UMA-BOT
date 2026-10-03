@@ -8,6 +8,7 @@ import {
   TextInputStyle
 } from 'discord.js';
 import type { TeamEntity, TournamentStatus } from '../../registration/TeamRepository.js';
+import { persona } from '../persona/index.js';
 
 export class RegistrationUI {
   /**
@@ -22,25 +23,11 @@ export class RegistrationUI {
     maxTeams: number,
     status: TournamentStatus = 'registration_open'
   ): EmbedBuilder {
-    const remaining = Math.max(0, maxTeams - activeCount);
     return new EmbedBuilder()
       .setColor(0x00A8FF)
-      .setTitle('🏆 UMA CUP — ĐĂNG KÝ THI ĐẤU')
-      .setDescription(
-        'Chào mừng các kiện tướng đến với giải đấu Liên Quân Mobile thường niên của **UMA Club**!\n\n' +
-        '**📋 THÔNG TIN GIẢI ĐẤU:**\n' +
-        '• **Bộ môn:** Liên Quân Mobile 5v5\n' +
-        '• **Đội hình chuẩn:** Đúng 5 tuyển thủ chính thức (+ tối đa 2 dự bị)\n' +
-        '• **Thể thức:** Single Elimination (Loại trực tiếp)\n' +
-        `• **Trạng thái:** ${status === 'registration_open' ? '🟢 **ĐANG MỞ ĐĂNG KÝ**' : status === 'checkin_open' ? '🟡 **ĐÃ KHÓA ĐĂNG KÝ — ĐANG CHECK-IN**' : status === 'bracket_ready' ? '🔵 **ĐÃ BỐC THĂM NHÁNH ĐẤU**' : '🔵 **ĐANG THI ĐẤU**'}\n\n` +
-        '**📊 TÌNH HÌNH ĐĂNG KÝ:**\n' +
-        `• 👥 **Đã đăng ký:** \`${activeCount} / ${maxTeams}\`\n` +
-        `• ✅ **Đã duyệt:** ${approvedCount}\n` +
-        `• ⏳ **Chờ duyệt / chỉnh sửa:** ${pendingOrCorrectionCount}\n` +
-        (status === 'registration_open' ? `• 🟢 **Còn lại:** ${remaining} suất\n\n` : '• 🔒 **Đăng ký:** Đã khóa\n\n') +
-        (status === 'registration_open' ? '📌 *Đội trưởng vui lòng bấm nút bên dưới để mở đơn đăng ký đội.*' : '📌 *Đăng ký đã khóa. Theo dõi `/uma status` và `/uma bracket`.*')
-      )
-      .setFooter({ text: 'UMA Tournament System • Vietnamese-First Esports UX' })
+      .setTitle(persona.messages.registration.panelTitle)
+      .setDescription(persona.messages.registration.panelDescription(activeCount, approvedCount, pendingOrCorrectionCount, maxTeams, status))
+      .setFooter({ text: persona.footer('Vietnamese-First Esports UX') })
       .setTimestamp();
   }
 
@@ -285,8 +272,9 @@ export class RegistrationUI {
   public static createTeamListEmbed(approvedTeams: TeamEntity[], pendingTeams: TeamEntity[]): EmbedBuilder {
     const embed = new EmbedBuilder()
       .setColor(0x00A8FF)
-      .setTitle('👥 DANH SÁCH ĐỘI TUYỂN — UMA CUP')
+      .setTitle('👥 DANH SÁCH ĐỘI TUYỂN — UMA CUP ⚡')
       .setDescription('Tổng hợp các đội tuyển đăng ký tham dự giải đấu Liên Quân Mobile.')
+      .setFooter({ text: persona.footer() })
       .setTimestamp();
 
     if (approvedTeams.length === 0) {
@@ -339,14 +327,14 @@ export class RegistrationUI {
 
     const embed = new EmbedBuilder()
       .setColor(color)
-      .setTitle(`ĐỘI CỦA BẠN: ${team.name} [${team.abbreviation}]`)
+      .setTitle(`⚡ ĐỘI CỦA CẬU: ${team.name} [${team.abbreviation}]`)
       .addFields(
         { name: '📊 Trạng thái', value: `**${statusHeader}**`, inline: true },
         { name: '📞 SĐT Đội trưởng', value: `\`${team.captainContact}\``, inline: true },
         { name: `👥 Đội hình chính (${starters.length}/5)`, value: startersText || '*Trống*', inline: false },
         { name: `🔄 Dự bị (${substitutes.length})`, value: subsText, inline: false }
       )
-      .setFooter({ text: `Mã đội: ${team.id}` })
+      .setFooter({ text: persona.footer(`Mã đội: ${team.id}`) })
       .setTimestamp(team.updatedAt);
 
     if (team.status === 'NEEDS_CORRECTION' && team.rejectionReason) {
@@ -378,7 +366,7 @@ export class RegistrationUI {
   public static createGuideEmbed(): EmbedBuilder {
     return new EmbedBuilder()
       .setColor(0x3B82F6)
-      .setTitle('📘 HƯỚNG DẪN ĐĂNG KÝ THI ĐẤU — UMA CUP')
+      .setTitle('📘 HƯỚNG DẪN ĐĂNG KÝ THI ĐẤU — UMA CUP ⚡')
       .setDescription(
         '**1. QUY TRÌNH ĐĂNG KÝ VÀ DUYỆT ĐƠN:**\n' +
         '1️⃣ **Đăng ký:** Đội trưởng bấm `[📝 Đăng ký đội]` và nhập đúng 5 dòng tuyển thủ chính thức (`Tên | UID`).\n' +
@@ -397,6 +385,6 @@ export class RegistrationUI {
         '• Mỗi đội trưởng chỉ được quản lý 1 đội đang hoạt động.\n\n' +
         '*Sau khi BTC khóa đăng ký, đội trưởng của đội đã duyệt dùng `/uma check-in`. BTC sẽ bốc thăm và mọi người xem nhánh đấu bằng `/uma bracket`. Phòng riêng thi đấu và báo kết quả sẽ được bổ sung sau.*'
       )
-      .setFooter({ text: 'UMA GAMING ARENA • Tôn vinh tinh thần đồng đội' });
+      .setFooter({ text: persona.arenaFooter('Tôn vinh tinh thần đồng đội') });
   }
 }
