@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
 import crypto from 'node:crypto';
 import {
   ReactionMedia,
@@ -11,9 +12,71 @@ import {
 } from '../src/bot/persona/index.js';
 import { AttachmentBuilder } from 'discord.js';
 
+function createSyntheticMediaFixture(targetDir: string): void {
+  const moods = {
+    confident: 3,
+    annoyed: 4,
+    electric: 4,
+    hype: 3,
+    victory: 3,
+    waiting: 2,
+    surprised: 2,
+    checking: 2
+  };
+
+  const catalog: Record<string, unknown[]> = {};
+
+  for (const [mood, count] of Object.entries(moods)) {
+    const moodDir = path.join(targetDir, mood);
+    fs.mkdirSync(moodDir, { recursive: true });
+    catalog[mood] = [];
+
+    for (let i = 1; i <= count; i++) {
+      const fileName = `${mood}-0${i}.gif`;
+      const filePath = path.join(moodDir, fileName);
+      // Valid animated GIF89a 100x100 with unique bytes so each has a unique sha256
+      const baseGif = Buffer.from(
+        '47494638396164006400800000000000ffffff21f90400000000002c000000006400640000020244010021f90400000000002c00000000640064000002024401003b',
+        'hex'
+      );
+      const uniqueByte = Buffer.from([i, mood.charCodeAt(0)]);
+      const gifBuf = Buffer.concat([baseGif.subarray(0, 13), uniqueByte, baseGif.subarray(15)]);
+      fs.writeFileSync(filePath, gifBuf);
+
+      const sha = crypto.createHash('sha256').update(gifBuf).digest('hex');
+      catalog[mood].push({
+        file: `${mood}/${fileName}`,
+        sha256: sha,
+        description: `Synthetic Misaka ${mood} clip ${i}`,
+        size: gifBuf.length,
+        width: 100,
+        height: 100,
+        frames: 2
+      });
+    }
+  }
+
+  fs.writeFileSync(path.join(targetDir, 'catalog.json'), JSON.stringify(catalog, null, 2));
+}
 
 describe('Misaka Reaction Media & Picker Tests', () => {
-  const stagingDir = '/tmp/misaka_staging';
+  const localStaging = '/tmp/misaka_staging';
+  let activeMediaDir = localStaging;
+  let fixtureDir: string | null = null;
+
+  beforeAll(() => {
+    if (!fs.existsSync(path.join(localStaging, 'catalog.json'))) {
+      fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'misaka-ci-fixture-'));
+      createSyntheticMediaFixture(fixtureDir);
+      activeMediaDir = fixtureDir;
+    }
+  });
+
+  afterAll(() => {
+    if (fixtureDir && fs.existsSync(fixtureDir)) {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
 
   beforeEach(() => {
     Persona.resetForTesting({
@@ -21,16 +84,16 @@ describe('Misaka Reaction Media & Picker Tests', () => {
       level: 'normal',
       gifsEnabled: true,
       gifLevel: 'normal',
-      mediaDir: stagingDir
+      mediaDir: activeMediaDir
     });
   });
 
   describe('ReactionMedia Catalog & Safety Checks', () => {
-    it('discovers and loads valid curated catalog from staging directory', () => {
-      const media = new ReactionMedia(stagingDir);
+    it('discovers and loads valid curated catalog from staging or persistent directory', () => {
+      const media = new ReactionMedia(activeMediaDir);
       const catalog = media.getCatalog();
 
-      expect(media.getMediaDir()).toBe(path.resolve(stagingDir));
+      expect(media.getMediaDir()).toBe(path.resolve(activeMediaDir));
       expect(catalog.confident?.length).toBe(3);
       expect(catalog.annoyed?.length).toBe(4);
       expect(catalog.electric?.length).toBe(4);
@@ -44,8 +107,9 @@ describe('Misaka Reaction Media & Picker Tests', () => {
       expect(totalGifs).toBe(23);
     });
 
+
     it('handles mood aliases for unpopulated moods gracefully', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       expect(media.hasMood('smug')).toBe(true);
       expect(media.getItems('smug').length).toBe(3); // Falls back to confident
 
@@ -54,7 +118,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
     });
 
     it('rejects directory traversal attacks strictly', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
 
       expect(media.isTraversalPath('../etc/passwd')).toBe(true);
       expect(media.isTraversalPath('/var/lib/secret.gif')).toBe(true);
@@ -84,7 +148,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
 
   describe('Serious Flow Invariant (Strict 0% GIF Guarantee)', () => {
     it('returns null for serious intensity under all circumstances', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: true,
@@ -110,7 +174,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
     });
 
     it('even with force=true, serious intensity STRICTLY returns null', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: true,
@@ -130,7 +194,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
 
   describe('Probability and Rate Limits', () => {
     it('respects probability threshold for normal interactions (35%)', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: true,
@@ -148,7 +212,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
     });
 
     it('respects probability threshold for showtime interactions (75%)', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: true,
@@ -165,7 +229,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
     });
 
     it('returns null when gifsEnabled is false or gifLevel is off', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: false,
@@ -181,7 +245,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
 
   describe('Anti-Repetition Deduplication', () => {
     it('avoids immediately repeating the same GIF when alternatives exist', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: true,
@@ -202,7 +266,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
     });
 
     it('does not stall or fail when history fills up; resets gracefully', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: true,
@@ -219,7 +283,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
 
   describe('Discord AttachmentBuilder & Persona Facade', () => {
     it('creates valid AttachmentBuilder with reaction.gif name', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: true,
@@ -274,7 +338,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
     });
 
     it('validates catalog integrity against disk assets: SHA-256, magic bytes, dimensions, and size <= 8 MiB', () => {
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const catalog = media.getCatalog();
       let testedGifs = 0;
 
@@ -310,7 +374,7 @@ describe('Misaka Reaction Media & Picker Tests', () => {
 
     it('serious flows strictly remain 0% GIF in production mode', () => {
       process.env.NODE_ENV = 'production';
-      const media = new ReactionMedia(stagingDir);
+      const media = new ReactionMedia(activeMediaDir);
       const picker = new ReactionPicker(media, {
         enabled: true,
         gifsEnabled: true,
